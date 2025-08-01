@@ -55,24 +55,28 @@ export class Products {
   @Column({
     type: 'varchar',
     length: 10,
+    nullable: true,
   })
   year: string;
 
   @Column({
     type: 'varchar',
     length: 50,
+    nullable: true,
   })
   brand: string;
 
   @Column({
     type: 'varchar',
     length: 100,
+    nullable: true,
   })
   model: string;
 
   @Column({
     type: 'varchar',
     length: 100,
+    nullable: true,
   })
   engine: string;
 

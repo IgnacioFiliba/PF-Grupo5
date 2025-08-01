@@ -30,6 +30,10 @@ export class ProductsService {
       newProduct.imgUrl = element.imgUrl ?? '';
       newProduct.stock = element.stock;
       newProduct.category = category!;
+      newProduct.year = element.year;
+      newProduct.brand = element.brand;
+      newProduct.model = element.model;
+      newProduct.engine = element.engine;
       return newProduct;
     });
 
