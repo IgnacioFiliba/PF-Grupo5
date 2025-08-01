@@ -34,8 +34,18 @@ export class ProductsController {
   }
 
   @ApiOperation({ summary: 'Obtener productos paginados' })
-  @ApiQuery({ name: 'page', required: false, example: 1, description: 'Número de página' })
-  @ApiQuery({ name: 'limit', required: false, example: 3, description: 'Cantidad de productos por página' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    example: 1,
+    description: 'Número de página',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    example: 3,
+    description: 'Cantidad de productos por página',
+  })
   @Get()
   getProducts(@Query('page') page: string, @Query('limit') limit: string) {
     const pageNumber = page ? parseInt(page, 10) : 1;
