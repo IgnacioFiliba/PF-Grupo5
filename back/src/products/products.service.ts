@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import data from '../seeds/products.json';
 import { Categories } from 'src/categories/entities/category.entity';
 import { Products } from './entities/product.entity';
+import { SearchProductDto } from './dto/search-product.dto';
 
 @Injectable()
 export class ProductsService {
@@ -66,5 +67,30 @@ export class ProductsService {
     Object.assign(product, productData);
 
     return await this.productsRepository.save(product);
+  }
+
+  async searchProducts(filters: SearchProductDto): Promise<Products[]> {
+    const query = this.productsRepository.createQueryBuilder('product');
+
+    if (filters.year) {
+      query.andWhere('product.year = :year', { year: filters.year });
+    }
+    if (filters.brand) {
+      query.andWhere('product.brand ILIKE :brand', {
+        brand: `%${filters.brand}%`,
+      });
+    }
+    if (filters.model) {
+      query.andWhere('product.model ILIKE :model', {
+        model: `%${filters.model}%`,
+      });
+    }
+    if (filters.engine) {
+      query.andWhere('product.engine ILIKE :engine', {
+        engine: `%${filters.engine}%`,
+      });
+    }
+
+    return query.getMany();
   }
 }

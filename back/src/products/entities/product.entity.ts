@@ -1,5 +1,6 @@
 import { Categories } from 'src/categories/entities/category.entity';
 import { OrderDetails } from 'src/orders/entities/order-detail.entity';
+import { StockEntry } from 'src/stock-entry/entities/stock-entry.entity';
 
 import {
   PrimaryGeneratedColumn,
@@ -8,6 +9,7 @@ import {
   ManyToOne,
   ManyToMany,
   JoinTable,
+  OneToMany,
 } from 'typeorm';
 
 @Entity({
@@ -50,6 +52,30 @@ export class Products {
   })
   imgUrl: string;
 
+  @Column({
+    type: 'varchar',
+    length: 10,
+  })
+  year: string;
+
+  @Column({
+    type: 'varchar',
+    length: 50,
+  })
+  brand: string;
+
+  @Column({
+    type: 'varchar',
+    length: 100,
+  })
+  model: string;
+
+  @Column({
+    type: 'varchar',
+    length: 100,
+  })
+  engine: string;
+
   @ManyToOne(() => Categories, (category) => category.products)
   category: Categories;
 
@@ -58,4 +84,7 @@ export class Products {
     name: 'ORDER_DETAILS_PRODUCTS',
   })
   orderDetails: OrderDetails[];
+
+  @OneToMany(() => StockEntry, (entry) => entry.product)
+  stockEntries: StockEntry[];
 }
