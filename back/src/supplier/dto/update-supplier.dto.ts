@@ -7,13 +7,13 @@ export class UpdateSupplierDto {
 
   @IsOptional()
   @IsString()
-  contactPerson?: string;
-
-  @IsOptional()
-  @IsEmail()
-  email?: string;
+  cuit?: string;
 
   @IsOptional()
   @IsString()
   phone?: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
 }
