@@ -7,8 +7,8 @@
     "imgUrl": "https://example.com/filtro_aceite.jpg",
     "category": "filtro",
     "year": "2021",
-    "brand": "Bosch",
-    "model": "Filtro X200",
+    "brand": "Volkswagen",
+    "model": "Gol Trend",
     "engine": "1.6"
   },
   {
@@ -19,9 +19,9 @@
     "imgUrl": "https://example.com/pastilla_brembo.jpg",
     "category": "frenos",
     "year": "2020",
-    "brand": "Brembo",
-    "model": "P2300",
-    "engine": "2.0"
+    "brand": "Toyota",
+    "model": "Corolla",
+    "engine": "1.8"
   },
   {
     "name": "Bujía NGK Iridium",
@@ -31,9 +31,9 @@
     "imgUrl": "https://example.com/bujia_ngk.jpg",
     "category": "encendido",
     "year": "2022",
-    "brand": "NGK",
-    "model": "Iridium IX",
-    "engine": "1.4"
+    "brand": "Ford",
+    "model": "Focus",
+    "engine": "2.0"
   },
   {
     "name": "Aceite Castrol 10W40",
@@ -43,9 +43,9 @@
     "imgUrl": "https://example.com/aceite_castrol.jpg",
     "category": "aceite",
     "year": "2023",
-    "brand": "Castrol",
-    "model": "GTX 10W40",
-    "engine": "1.8"
+    "brand": "Chevrolet",
+    "model": "Cruze",
+    "engine": "1.4 Turbo"
   },
   {
     "name": "Amortiguador Monroe",
@@ -55,8 +55,8 @@
     "imgUrl": "https://example.com/amortiguador_monroe.jpg",
     "category": "suspension",
     "year": "2019",
-    "brand": "Monroe",
-    "model": "Reflex",
-    "engine": "2.2"
+    "brand": "Renault",
+    "model": "Sandero Stepway",
+    "engine": "1.6"
   }
 ]
