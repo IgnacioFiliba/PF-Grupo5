@@ -1,99 +1,98 @@
 [
-    {
-      "name": "Iphone 15",
-      "description": "The best smartphone in the world",
-      "price": 199.99,
-      "stock": 12,
-      "imgUrl": "https://example.com/iphone15.jpg",
-      "category": "smartphone"
-    },
-    {
-      "name": "Samsung Galaxy S23",
-      "description": "The best smartphone in the world",
-      "price": 150.0,
-      "stock": 12,
-      "imgUrl": "https://example.com/iphone15.jpg",
-      "category": "smartphone"
-    },
-    {
-      "name": "Motorola Edge 40",
-      "description": "The best smartphone in the world",
-      "price": 179.89,
-      "stock": 12,
-      "imgUrl": "https://example.com/iphone15.jpg",
-      "category": "smartphone"
-    },
-    {
-      "name": "Samsung Odyssey G9",
-      "description": "The best monitor in the world",
-      "price": 299.99,
-      "stock": 12,
-      "imgUrl": "https://example.com/iphone15.jpg",
-      "category": "monitor"
-    },
-    {
-      "name": "LG UltraGear",
-      "description": "The best monitor in the world",
-      "price": 199.99,
-      "stock": 12,
-      "imgUrl": "https://example.com/iphone15.jpg",
-      "category": "monitor"
-    },
-    {
-      "name": "Acer Predator",
-      "description": "The best monitor in the world",
-      "price": 150.0,
-      "stock": 12,
-      "imgUrl": "https://example.com/iphone15.jpg",
-      "category": "monitor"
-    },
-    {
-      "name": "Razer BlackWidow V3",
-      "description": "The best keyboard in the world",
-      "price": 99.99,
-      "stock": 12,
-      "imgUrl": "https://example.com/iphone15.jpg",
-      "category": "keyboard"
-    },
-    {
-      "name": "Corsair K70",
-      "description": "The best keyboard in the world",
-      "price": 79.99,
-      "stock": 12,
-      "imgUrl": "https://example.com/iphone15.jpg",
-      "category": "keyboard"
-    },
-    {
-      "name": "Logitech G Pro",
-      "description": "The best keyboard in the world",
-      "price": 59.99,
-      "stock": 12,
-      "imgUrl": "https://example.com/iphone15.jpg",
-      "category": "keyboard"
-    },
-    {
-      "name": "Razer Viper",
-      "description": "The best mouse in the world",
-      "price": 49.99,
-      "stock": 12,
-      "imgUrl": "https://example.com/iphone15.jpg",
-      "category": "mouse"
-    },
-    {
-      "name": "Logitech G502 Pro",
-      "description": "The best mouse in the world",
-      "price": 39.99,
-      "stock": 12,
-      "imgUrl": "https://example.com/iphone15.jpg",
-      "category": "mouse"
-    },
-    {
-      "name": "SteelSeries Rival 3",
-      "description": "The best mouse in the world",
-      "price": 29.99,
-      "stock": 12,
-      "imgUrl": "https://example.com/iphone15.jpg",
-      "category": "mouse"
-    }
-  ]
-  
+  {
+    "name": "Filtro de Aceite Bosch",
+    "description": "Filtro de aceite para motores nafteros",
+    "price": 15.99,
+    "stock": 25,
+    "imgUrl": "https://example.com/filtro_aceite.jpg",
+    "category": "motor"
+  },
+  {
+    "name": "Bujía NGK Iridium",
+    "description": "Bujía de alto rendimiento NGK",
+    "price": 9.99,
+    "stock": 40,
+    "imgUrl": "https://example.com/bujia_ngk.jpg",
+    "category": "motor"
+  },
+  {
+    "name": "Correa de Distribución Gates",
+    "description": "Correa reforzada para sistema de distribución",
+    "price": 45.00,
+    "stock": 18,
+    "imgUrl": "https://example.com/correa.jpg",
+    "category": "motor"
+  },
+  {
+    "name": "Amortiguador Monroe Delantero",
+    "description": "Amortiguador hidráulico para suspensión delantera",
+    "price": 65.99,
+    "stock": 10,
+    "imgUrl": "https://example.com/amortiguador.jpg",
+    "category": "suspension"
+  },
+  {
+    "name": "Resorte de Suspensión Trasero",
+    "description": "Resorte helicoidal para suspensión trasera",
+    "price": 39.99,
+    "stock": 14,
+    "imgUrl": "https://example.com/resorte.jpg",
+    "category": "suspension"
+  },
+  {
+    "name": "Kit de Pastillas de Freno Brembo",
+    "description": "Pastillas de freno de alto rendimiento",
+    "price": 59.99,
+    "stock": 20,
+    "imgUrl": "https://example.com/pastillas.jpg",
+    "category": "frenos"
+  },
+  {
+    "name": "Disco de Freno Ventilado",
+    "description": "Disco de freno ventilado de acero templado",
+    "price": 74.99,
+    "stock": 15,
+    "imgUrl": "https://example.com/disco_freno.jpg",
+    "category": "frenos"
+  },
+  {
+    "name": "Sensor de Oxígeno Bosch",
+    "description": "Sensor de oxígeno para inyección electrónica",
+    "price": 34.50,
+    "stock": 22,
+    "imgUrl": "https://example.com/sensor_oxigeno.jpg",
+    "category": "eléctrico"
+  },
+  {
+    "name": "Alternador Valeo 90A",
+    "description": "Alternador para vehículos medianos",
+    "price": 129.99,
+    "stock": 8,
+    "imgUrl": "https://example.com/alternador.jpg",
+    "category": "eléctrico"
+  },
+  {
+    "name": "Kit Xenón H7 6000K",
+    "description": "Kit de luces xenón blanco brillante",
+    "price": 49.99,
+    "stock": 30,
+    "imgUrl": "https://example.com/xenon.jpg",
+    "category": "eléctrico"
+  },
+  {
+    "name": "Tapizado Universal de Asientos",
+    "description": "Set de fundas para asientos delanteros y traseros",
+    "price": 39.99,
+    "stock": 12,
+    "imgUrl": "https://example.com/tapizado.jpg",
+    "category": "accesorios"
+  },
+  {
+    "name": "Volante Deportivo Sparco",
+    "description": "Volante con grip deportivo para autos tuning",
+    "price": 89.99,
+    "stock": 5,
+    "imgUrl": "https://example.com/volante.jpg",
+    "category": "accesorios"
+  }
+]

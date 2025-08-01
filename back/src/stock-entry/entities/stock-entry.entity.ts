@@ -13,7 +13,7 @@ export class StockEntry {
   @Column()
   date: Date;
 
-  @ManyToOne(() => Products, (product) => product.stockEntries)
+  @ManyToOne(() => Products, (product) => product.stock)
   product: Products;
 
   @ManyToOne(() => Supplier, (supplier) => supplier.stockEntries)
