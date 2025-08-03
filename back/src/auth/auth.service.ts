@@ -5,7 +5,6 @@ import { Users } from 'src/users/entities/user.entity';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { access } from 'fs';
 @Injectable()
 export class AuthService {
   constructor(
@@ -15,6 +14,7 @@ export class AuthService {
   ) {}
 
   async register(user: CreateUserDto): Promise<Users> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { confirmPassword, ...userWithoutPassword } = user;
 
     const findUser = await this.usersRepository.findOne({
@@ -70,5 +70,29 @@ export class AuthService {
     const token = this.jwtService.sign(payload);
 
     return { access_Token: token };
+  }
+
+  async googleLogin(user: any) {
+    const existingUser = await this.usersRepository.findOne({
+      where: { email: user.email },
+    });
+
+    let finalUser = existingUser;
+
+    finalUser = this.usersRepository.create({
+      name: user.name,
+      email: user.email,
+      password: '',
+      isOverAge: true,
+    });
+
+    await this.usersRepository.save(finalUser);
+
+    const payload = {
+      sub: finalUser.id,
+      email: finalUser.email,
+    };
+
+    return this.jwtService.sign(payload);
   }
 }
