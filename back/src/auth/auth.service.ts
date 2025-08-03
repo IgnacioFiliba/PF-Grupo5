@@ -33,13 +33,6 @@ export class AuthService {
       ...userWithoutPassword,
       password: hashedPassword,
     });
-    console.log(user.age);
-    if (user.age < 18) {
-      createUser.isOverAge = false;
-    } else {
-      createUser.isOverAge = true;
-    }
-
     const newUser = await this.usersRepository.save(createUser);
 
     return newUser;
@@ -83,7 +76,6 @@ export class AuthService {
       name: user.name,
       email: user.email,
       password: '',
-      isOverAge: true,
     });
 
     await this.usersRepository.save(finalUser);

@@ -97,9 +97,6 @@ export class CreateUserDto {
   isAdmin: boolean;
   @IsEmpty()
   isSuperAdmin: boolean;
-  @IsNotEmpty()
-  @IsNumber()
-  age: number;
 }
 
 // Login DTO

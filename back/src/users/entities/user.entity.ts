@@ -15,20 +15,17 @@ export class Users {
   @Column({ type: 'varchar', length: 100, nullable: false })
   password: string;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   phone: number;
 
-  @Column({ type: 'varchar', length: 50 })
+  @Column({ type: 'varchar', length: 50, nullable: true })
   country: string;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', nullable: true })
   address: string;
 
-  @Column({ type: 'varchar', length: 50 })
+  @Column({ type: 'varchar', length: 50, nullable: true })
   city: string;
-
-  @Column({ type: 'boolean', default: false })
-  isOverAge: boolean;
 
   @Column({ type: 'boolean', default: false })
   isAdmin: boolean;
