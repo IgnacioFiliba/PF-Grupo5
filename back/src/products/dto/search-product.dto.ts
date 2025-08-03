@@ -1,6 +1,4 @@
-export class SearchProductDto {
-  year?: string;
-  brand?: string;
-  model?: string;
-  engine?: string;
-}
+import { PartialType } from '@nestjs/swagger';
+import { CreateProductDto } from './create-product.dto';
+
+export class SearchProductDto extends PartialType(CreateProductDto) {}
