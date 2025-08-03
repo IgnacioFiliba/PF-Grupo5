@@ -1,94 +1,43 @@
-import { Categories } from 'src/categories/entities/category.entity';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany } from 'typeorm';
+import { Category } from 'src/categories/entities/category.entity';
 import { OrderDetails } from 'src/orders/entities/order-detail.entity';
-import { StockEntry } from 'src/stock-entry/entities/stock-entry.entity';
 
-import {
-  PrimaryGeneratedColumn,
-  Column,
-  Entity,
-  ManyToOne,
-  ManyToMany,
-  JoinTable,
-  OneToMany,
-} from 'typeorm';
-
-@Entity({
-  name: 'PRODUCTS',
-})
+@Entity('products')
 export class Products {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({
-    type: 'varchar',
-    length: 50,
-    unique: true,
-  })
+  @Column({ length: 100, unique: true })
   name: string;
 
-  @Column({
-    type: 'text',
-    nullable: false,
-  })
-  description: string;
+  @Column('decimal', { precision: 10, scale: 2 })
+  price: number;
 
-  @Column({
-    type: 'decimal',
-    precision: 10,
-    scale: 2,
-    nullable: false,
-  })
-  price: number; // 99.50
+  @Column()
+  stock: number;
 
-  @Column({
-    type: 'int',
-    nullable: false,
-  })
-  stock: number; // 8
-
-  @Column({
-    type: 'text',
-    default: 'No image',
-  })
+  @Column({ nullable: true })
   imgUrl: string;
 
-  @Column({
-    type: 'varchar',
-    length: 10,
-    nullable: true,
-  })
+  @Column({ length: 20 })
   year: string;
 
-  @Column({
-    type: 'varchar',
-    length: 50,
-    nullable: true,
-  })
+  @Column({ length: 50 })
   brand: string;
 
-  @Column({
-    type: 'varchar',
-    length: 100,
-    nullable: true,
-  })
+  @Column({ length: 50 })
   model: string;
 
-  @Column({
-    type: 'varchar',
-    length: 100,
-    nullable: true,
-  })
+  @Column({ length: 50 })
   engine: string;
 
-  @ManyToOne(() => Categories, (category) => category.products)
-  category: Categories;
+  @ManyToOne(() => Category, (category) => category.products)
+  category: Category;
 
-  @ManyToMany(() => OrderDetails, (orderDetails) => orderDetails.products)
-  @JoinTable({
-    name: 'ORDER_DETAILS_PRODUCTS',
-  })
+  @Column({ nullable: true, type: 'text' })
+  description?: string;
+  
+  @OneToMany(() => OrderDetails, (detail) => detail.products)
   orderDetails: OrderDetails[];
 
-  @OneToMany(() => StockEntry, (entry) => entry.product)
-  stockEntries: StockEntry[];
 }
