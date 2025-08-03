@@ -21,6 +21,7 @@ import {
   ApiBody,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { SearchProductDto } from './dto/search-product.dto';
 
 @ApiTags('Products')
 @Controller('products')
@@ -92,5 +93,10 @@ export class ProductsController {
     }>,
   ) {
     return this.productsService.updateProduct(id, productData);
+  }
+
+  @Get('search')
+  search(@Query() filters: SearchProductDto) {
+    return this.productsService.searchProducts(filters);
   }
 }
