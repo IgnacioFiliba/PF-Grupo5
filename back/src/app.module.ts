@@ -12,6 +12,9 @@ import { CategoriesModule } from './categories/categories.module';
 import { OrdersModule } from './orders/orders.module';
 import { FileUploadModule } from './files-upload/files-upload.module';
 import { JwtModule } from '@nestjs/jwt';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { SupplierModule } from './supplier/supplier.module';
+import { StockEntryModule } from './stock-entry/stock-entry.module';
 
 @Module({
   imports: [
@@ -20,6 +23,9 @@ import { JwtModule } from '@nestjs/jwt';
     ProductsModule,
     AuthModule,
     CategoriesModule,
+    DashboardModule,
+    SupplierModule,
+    StockEntryModule,
     ConfigModule.forRoot({ isGlobal: true, load: [typeorm] }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
@@ -29,7 +35,7 @@ import { JwtModule } from '@nestjs/jwt';
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '1h' },
+      signOptions: { expiresIn: '1y' },
     }),
   ],
   controllers: [AppController],

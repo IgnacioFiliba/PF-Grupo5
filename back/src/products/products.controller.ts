@@ -6,44 +6,120 @@ import {
   Param,
   Delete,
   Put,
+  Query,
+  UseGuards,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
-import { SearchProductDto } from './dto/search-product.dto';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { RolesGuard } from 'src/auth/roles.guard';
+import { Roles } from 'src/interceptors/roles.decorator';
+import { Role } from 'src/auth/roles.enum';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiQuery,
+  ApiParam,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 
 @ApiTags('Products')
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
+  @ApiOperation({ summary: 'Crear un nuevo producto (solo Admin)' })
+  @ApiBearerAuth()
+  @Roles(Role.ADMIN)
+  @UseGuards(AuthGuard, RolesGuard)
   @Post()
-  @ApiOperation({ summary: 'Create a new product' })
   create(@Body() dto: CreateProductDto) {
     return this.productsService.create(dto);
   }
 
-  @Get()
-  @ApiOperation({ summary: 'Get all products' })
-  findAll() {
-    return this.productsService.findAll();
+  @ApiOperation({ summary: 'Ejecutar seeder de productos (temporal)' })
+  @Get('/seeder')
+  seeder() {
+    return this.productsService.seeder();
   }
 
+  @ApiOperation({ summary: 'Obtener productos paginados' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    example: 1,
+    description: 'Número de página',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    example: 10,
+    description: 'Cantidad por página',
+  })
+  @Get()
+  getProducts(@Query('page') page: string, @Query('limit') limit: string) {
+    const pageNumber = page ? parseInt(page, 10) : 1;
+    const limitNumber = limit ? parseInt(limit, 10) : 10;
+    return this.productsService.getProducts(pageNumber, limitNumber);
+  }
+
+  @ApiOperation({ summary: 'Obtener producto por ID' })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID del producto',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
   @Get(':id')
-  @ApiOperation({ summary: 'Get product by id' })
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.findOne(id);
   }
 
+  @ApiOperation({ summary: 'Actualizar producto por ID (solo Admin)' })
+  @ApiBearerAuth()
+  @Roles(Role.ADMIN)
+  @UseGuards(AuthGuard, RolesGuard)
+  @ApiParam({
+    name: 'id',
+    description: 'UUID del producto a actualizar',
+    example: '92b50dd3-ab7b-453d-9403-e76e479075e7',
+  })
+  @ApiBody({
+    description: 'Datos a actualizar del producto',
+    required: true,
+    examples: {
+      ejemploActualizacion: {
+        summary: 'Ejemplo',
+        value: {
+          name: 'Mouse inalámbrico gamer',
+          description: 'Mouse con RGB y 7 botones',
+          price: 29.99,
+          stock: 100,
+          imgUrl: 'https://example.com/mouse.jpg',
+        },
+      },
+    },
+  })
   @Put(':id')
-  @ApiOperation({ summary: 'Update product by id' })
-  update(@Param('id') id: string, @Body() dto: SearchProductDto) {
-    return this.productsService.update(id, dto);
+  updateProduct(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: Partial<CreateProductDto>,
+  ) {
+    return this.productsService.updateProduct(id, dto);
   }
 
+  @ApiOperation({ summary: 'Eliminar producto por ID (solo Admin)' })
+  @ApiBearerAuth()
+  @Roles(Role.ADMIN)
+  @UseGuards(AuthGuard, RolesGuard)
+  @ApiParam({
+    name: 'id',
+    description: 'UUID del producto',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete product by id' })
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.remove(id);
   }
 }
