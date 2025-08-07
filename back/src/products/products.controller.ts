@@ -65,17 +65,16 @@ export class ProductsController {
     return this.productsService.getProducts(pageNumber, limitNumber);
   }
 
-  @ApiOperation({ summary: 'Obtener producto por nombre' })
+  @ApiOperation({ summary: 'Obtener producto por ID' })
   @ApiParam({
-  name: 'name',
-  description: 'Nombre del producto',
-  example: 'Filtro de Aceite Bosch',
+    name: 'id',
+    description: 'UUID del producto',
+    example: '123e4567-e89b-12d3-a456-426614174000',
   })
-  @Get('name/:name')
-  findOneByName(@Param('name') name: string) {
-  return this.productsService.findOneByName(name);
+  @Get(':id')
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.productsService.findOne(id);
   }
-
 
   @ApiOperation({ summary: 'Actualizar producto por ID (solo Admin)' })
   @ApiBearerAuth()
@@ -124,4 +123,15 @@ export class ProductsController {
     return this.productsService.remove(id);
   }
   //prueba de carga de datos en develop
+  @ApiOperation({ summary: 'Obtener producto por nombre' })
+  @ApiParam({
+    name: 'name',
+    description: 'Nombre del producto',
+    example: 'Filtro de Aceite Bosch',
+  })
+  @Get('name/:name')
+    findOneByName(@Param('name') name: string) {
+    return this.productsService.findOneByName(name);
+  }
+
 }

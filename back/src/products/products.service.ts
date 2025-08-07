@@ -29,15 +29,14 @@ export class ProductsService {
     return this.productRepository.find({ relations: ['category'] });
   }
 
-  async findOneByName(name: string): Promise<Products> {
+  async findOne(id: string): Promise<Products> {
     const product = await this.productRepository.findOne({
-      where: { name },
+      where: { id },
       relations: ['category'],
     });
-    if (!product) throw new NotFoundException(`Product "${name}" not found`);
+    if (!product) throw new NotFoundException(`Product ${id} not found`);
     return product;
   }
-  
 
   async update(id: string, dto: SearchProductDto): Promise<Products> {
     const product = await this.findOne(id);
@@ -107,4 +106,13 @@ export class ProductsService {
     Object.assign(product, productData);
     return this.productRepository.save(product);
   }
+  async findOneByName(name: string): Promise<Products> {
+    const product = await this.productRepository.findOne({
+      where: { name },
+      relations: ['category'],
+    });
+    if (!product) throw new NotFoundException(`Product "${name}" not found`);
+    return product;
+  }
+  
 }
