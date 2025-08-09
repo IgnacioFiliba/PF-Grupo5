@@ -62,29 +62,48 @@ export class AuthService {
 
     const token = this.jwtService.sign(payload);
 
-    return { access_Token: token };
+    return {
+      access_Token: token,
+      user: {
+        id: findUser.id,
+        name: findUser.name,
+        email: findUser.email,
+        isAdmin: findUser.isAdmin,
+        isSuperAdmin: findUser.isSuperAdmin,
+      },
+    };
   }
 
   async googleLogin(user: any) {
-    const existingUser = await this.usersRepository.findOne({
+    let finalUser = await this.usersRepository.findOne({
       where: { email: user.email },
     });
 
-    let finalUser = existingUser;
-
-    finalUser = this.usersRepository.create({
-      name: user.name,
-      email: user.email,
-      password: '',
-    });
-
-    await this.usersRepository.save(finalUser);
+    if (!finalUser) {
+      finalUser = this.usersRepository.create({
+        name: user.name,
+        email: user.email,
+        password: '',
+      });
+      await this.usersRepository.save(finalUser);
+    }
 
     const payload = {
       sub: finalUser.id,
       email: finalUser.email,
     };
 
-    return this.jwtService.sign(payload);
+    const token = this.jwtService.sign(payload);
+
+    return {
+      access_Token: token,
+      user: {
+        id: finalUser.id,
+        name: finalUser.name,
+        email: finalUser.email,
+        isAdmin: finalUser.isAdmin,
+        isSuperAdmin: finalUser.isSuperAdmin,
+      },
+    };
   }
 }
