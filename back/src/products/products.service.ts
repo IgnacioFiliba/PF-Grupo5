@@ -81,8 +81,13 @@ export class ProductsService {
 
   // MOD: Cambiamos la firma para aceptar 'search' y reemplazamos el find()+slice
   // por un QueryBuilder que hace búsqueda parcial (ILIKE) y paginación en DB.
-  async getProducts(page: number, limit: number, search?: string): Promise<Products[]> {
-    const qb = this.productRepository.createQueryBuilder('p')
+  async getProducts(
+    page: number,
+    limit: number,
+    search?: string,
+  ): Promise<Products[]> {
+    const qb = this.productRepository
+      .createQueryBuilder('p')
       .leftJoinAndSelect('p.category', 'c');
 
     // Búsqueda parcial y case-insensitive en varios campos si viene 'search'
