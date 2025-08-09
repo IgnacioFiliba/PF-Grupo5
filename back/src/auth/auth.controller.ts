@@ -30,7 +30,6 @@ export class AuthController {
         country: 'Argentina',
         address: 'Calle Muestra 123',
         city: 'Córdoba',
-        age: 25, // Edad del usuario
       },
     },
   })
