@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Products } from './entities/product.entity';
+import { Category } from 'src/categories/entities/category.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { SearchProductDto } from './dto/search-product.dto';
-import { Category } from 'src/categories/entities/category.entity';
+import data from '../seeds/products.json';
 
 @Injectable()
 export class ProductsService {
@@ -54,4 +55,64 @@ export class ProductsService {
     const product = await this.findOne(id);
     await this.productRepository.remove(product);
   }
+
+  async seeder() {
+    const categories = await this.categoryRepository.find();
+
+    const newProducts = data.map((element) => {
+      const category = categories.find((cat) => element.category === cat.name);
+
+      const newProduct = new Products();
+      newProduct.name = element.name;
+      newProduct.description = element.description;
+      newProduct.price = element.price;
+      newProduct.imgUrl = element.imgUrl ?? '';
+      newProduct.stock = element.stock;
+      newProduct.category = category!;
+      newProduct.year = element.year;
+      newProduct.brand = element.brand;
+      newProduct.model = element.model;
+      newProduct.engine = element.engine;
+      return newProduct;
+    });
+
+    await this.productRepository.upsert(newProducts, ['name']);
+  }
+
+  async getProducts(page: number, limit: number): Promise<Products[]> {
+    const allProducts = await this.productRepository.find({
+      relations: ['category'],
+    });
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    return allProducts.slice(start, end);
+  }
+
+  async updateProduct(
+    id: string,
+    productData: Partial<{
+      name: string;
+      description: string;
+      price: number;
+      stock: number;
+      imgUrl: string;
+    }>,
+  ): Promise<Products> {
+    const product = await this.productRepository.findOneBy({ id });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    Object.assign(product, productData);
+    return this.productRepository.save(product);
+  }
+  async findOneByName(name: string): Promise<Products> {
+    const product = await this.productRepository.findOne({
+      where: { name },
+      relations: ['category'],
+    });
+    if (!product) throw new NotFoundException(`Product "${name}" not found`);
+    return product;
+  }
+  
 }
