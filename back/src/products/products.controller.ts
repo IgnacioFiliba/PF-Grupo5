@@ -45,7 +45,7 @@ export class ProductsController {
     return this.productsService.seeder();
   }
 
-  @ApiOperation({ summary: 'Obtener productos paginados' })
+  @ApiOperation({ summary: 'Obtener productos paginados con búsqueda parcial' })
   @ApiQuery({
     name: 'page',
     required: false,
@@ -58,11 +58,22 @@ export class ProductsController {
     example: 10,
     description: 'Cantidad por página',
   })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    example: 'bosch',
+    description:
+      'Texto a buscar (parcial, case-insensitive) en name, brand, model, description, engine y year',
+  })
   @Get()
-  getProducts(@Query('page') page: string, @Query('limit') limit: string) {
+  getProducts(
+    @Query('page') page: string,
+    @Query('limit') limit: string,
+    @Query('search') search?: string,
+  ) {
     const pageNumber = page ? parseInt(page, 10) : 1;
     const limitNumber = limit ? parseInt(limit, 10) : 10;
-    return this.productsService.getProducts(pageNumber, limitNumber);
+    return this.productsService.getProducts(pageNumber, limitNumber, search);
   }
 
   @ApiOperation({ summary: 'Obtener producto por ID' })
@@ -122,16 +133,16 @@ export class ProductsController {
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.remove(id);
   }
-  //prueba de carga de datos en develop
-  @ApiOperation({ summary: 'Obtener producto por nombre' })
+
+  // prueba de carga de datos en develop
+  @ApiOperation({ summary: 'Obtener producto por nombre (coincidencia exacta)' })
   @ApiParam({
     name: 'name',
     description: 'Nombre del producto',
     example: 'Filtro de Aceite Bosch',
   })
   @Get('name/:name')
-    findOneByName(@Param('name') name: string) {
+  findOneByName(@Param('name') name: string) {
     return this.productsService.findOneByName(name);
   }
-
 }

@@ -79,14 +79,31 @@ export class ProductsService {
     await this.productRepository.upsert(newProducts, ['name']);
   }
 
-  async getProducts(page: number, limit: number): Promise<Products[]> {
-    const allProducts = await this.productRepository.find({
-      relations: ['category'],
-    });
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    return allProducts.slice(start, end);
+  // MOD: Cambiamos la firma para aceptar 'search' y reemplazamos el find()+slice
+  // por un QueryBuilder que hace búsqueda parcial (ILIKE) y paginación en DB.
+  async getProducts(page: number, limit: number, search?: string): Promise<Products[]> {
+    const qb = this.productRepository.createQueryBuilder('p')
+      .leftJoinAndSelect('p.category', 'c');
+
+    // Búsqueda parcial y case-insensitive en varios campos si viene 'search'
+    if (search && search.trim().length > 0) {
+      qb.where(
+        `p.name ILIKE :term
+         OR p.brand ILIKE :term
+         OR p.model ILIKE :term
+         OR p.description ILIKE :term
+         OR p.engine ILIKE :term
+         OR p.year ILIKE :term`,
+        { term: `%${search.trim()}%` },
+      );
+    }
+
+    // Paginación hecha por la base de datos
+    qb.skip((page - 1) * limit).take(limit);
+
+    return qb.getMany();
   }
+  // END MOD
 
   async updateProduct(
     id: string,
@@ -106,6 +123,7 @@ export class ProductsService {
     Object.assign(product, productData);
     return this.productRepository.save(product);
   }
+
   async findOneByName(name: string): Promise<Products> {
     const product = await this.productRepository.findOne({
       where: { name },
@@ -114,5 +132,4 @@ export class ProductsService {
     if (!product) throw new NotFoundException(`Product "${name}" not found`);
     return product;
   }
-  
 }
