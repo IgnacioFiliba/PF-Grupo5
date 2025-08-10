@@ -4,10 +4,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Products } from './entities/product.entity';
 import { Category } from 'src/categories/entities/category.entity';
 import { CreateProductDto } from './dto/create-product.dto';
-import { FileUploadRepository } from 'src/files-upload/file-upload.repository';
+import { FilesUploadRepository } from 'src/files-upload/files-upload.repository';
 import { SearchProductDto } from './dto/search-product.dto';
 import { FindProductsQuery } from './dto/find-products.query'; // <-- NUEVO
 import data from '../seeds/products.json';
+import { FilesUploadService } from 'src/files-upload/files-upload.service';
+
 
 @Injectable()
 export class ProductsService {
@@ -16,7 +18,7 @@ export class ProductsService {
     private readonly productRepository: Repository<Products>,
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
-    private readonly fileUploadRepository: FileUploadRepository,
+    private readonly fileUploadRepository: FilesUploadRepository,
   ) {}
 
   async create(
