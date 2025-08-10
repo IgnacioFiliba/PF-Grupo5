@@ -1,10 +1,21 @@
-import { Body, Controller, Get, Post, UseInterceptors } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  UseInterceptors,
+  Req,
+  UseGuards,
+  HttpCode,
+} from '@nestjs/common';
 import { CreateUserDto, LoginDto } from 'src/users/dto/create-user.dto';
 import { AuthService } from './auth.service';
 import { ExcludePasswordInterceptor } from 'src/interceptors/exclude-password.interceptor';
-import { ApiTags, ApiBody, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBody, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { AuthGuard } from './auth.guard';
 
 @ApiTags('Auth')
+@ApiBearerAuth()
 @UseInterceptors(ExcludePasswordInterceptor)
 @Controller('auth')
 export class AuthController {
@@ -23,14 +34,13 @@ export class AuthController {
     schema: {
       example: {
         name: 'Ignacio Muestra',
-        email: 'Muestra@example.com',
+        email: 'muestra@example.com',
         password: 'Muestra123!',
         confirmPassword: 'Muestra123!',
         phone: 3512345678,
         country: 'Argentina',
         address: 'Calle Muestra 123',
         city: 'Córdoba',
-        age: 25, // Edad del usuario
       },
     },
   })
@@ -43,13 +53,18 @@ export class AuthController {
   @ApiBody({
     description: 'Credenciales para iniciar sesión',
     schema: {
-      example: {
-        email: 'admin@example.com',
-        password: 'Admin123!',
-      },
+      example: { email: 'admin@example.com', password: 'Admin123!' },
     },
   })
   signIn(@Body() credentials: LoginDto) {
     return this.authService.signIn(credentials);
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('/logout')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Cerrar sesión (borra token en front)' })
+  logout(@Req() _req: any) {
+    return;
   }
 }
