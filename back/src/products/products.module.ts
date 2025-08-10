@@ -4,9 +4,10 @@ import { ProductsService } from './products.service';
 import { ProductsController } from './products.controller';
 import { Products } from './entities/product.entity';
 import { Category } from 'src/categories/entities/category.entity';
+import { FileUploadModule } from 'src/files-upload/files-upload.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Products, Category])],
+  imports: [TypeOrmModule.forFeature([Products, Category]), FileUploadModule],
   controllers: [ProductsController],
   providers: [ProductsService],
 })

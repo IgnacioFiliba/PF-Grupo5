@@ -10,5 +10,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
   imports: [TypeOrmModule.forFeature([Products])],
   controllers: [FileUploadController],
   providers: [FileUploadService, cloudinaryConfig, FileUploadRepository],
+  exports: [FileUploadRepository],
 })
 export class FileUploadModule {}

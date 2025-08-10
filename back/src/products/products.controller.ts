@@ -9,6 +9,8 @@ import {
   Query,
   UseGuards,
   ParseUUIDPipe,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -19,24 +21,47 @@ import { Role } from 'src/auth/roles.enum';
 import {
   ApiTags,
   ApiOperation,
+  ApiBearerAuth,
   ApiQuery,
   ApiParam,
   ApiBody,
-  ApiBearerAuth,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  FileTypeValidator,
+  MaxFileSizeValidator,
+  ParseFilePipe,
+} from '@nestjs/common/pipes';
 
 @ApiTags('Products')
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
-  @ApiOperation({ summary: 'Crear un nuevo producto (solo Admin)' })
+  @ApiOperation({ summary: 'Crear un nuevo producto (solo Admin) con imagen' })
   @ApiBearerAuth()
   @Roles(Role.ADMIN)
   @UseGuards(AuthGuard, RolesGuard)
   @Post()
-  create(@Body() dto: CreateProductDto) {
-    return this.productsService.create(dto);
+  @UseInterceptors(FileInterceptor('file'))
+  create(
+    @Body() dto: CreateProductDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({
+            maxSize: 300000,
+            message: 'El archivo es demasiado grande. Máximo 300KB.',
+          }),
+          new FileTypeValidator({
+            fileType: /^image\/(jpg|jpeg|png|webp)$/i,
+          }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+  ) {
+    return this.productsService.create(dto, file);
   }
 
   @ApiOperation({ summary: 'Ejecutar seeder de productos (temporal)' })
@@ -135,7 +160,9 @@ export class ProductsController {
   }
 
   // prueba de carga de datos en develop
-  @ApiOperation({ summary: 'Obtener producto por nombre (coincidencia exacta)' })
+  @ApiOperation({
+    summary: 'Obtener producto por nombre (coincidencia exacta)',
+  })
   @ApiParam({
     name: 'name',
     description: 'Nombre del producto',

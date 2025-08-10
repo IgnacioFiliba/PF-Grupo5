@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Products } from './entities/product.entity';
 import { Category } from 'src/categories/entities/category.entity';
 import { CreateProductDto } from './dto/create-product.dto';
+import { FileUploadRepository } from 'src/files-upload/file-upload.repository';
 import { SearchProductDto } from './dto/search-product.dto';
 import data from '../seeds/products.json';
 
@@ -14,14 +15,30 @@ export class ProductsService {
     private readonly productRepository: Repository<Products>,
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
+    private readonly fileUploadRepository: FileUploadRepository,
   ) {}
 
-  async create(dto: CreateProductDto): Promise<Products> {
+  async create(
+    dto: CreateProductDto,
+    file?: Express.Multer.File,
+  ): Promise<Products> {
     const category = await this.categoryRepository.findOne({
       where: { id: dto.categoryId },
     });
     if (!category) throw new NotFoundException('Category not found');
-    const product = this.productRepository.create({ ...dto, category });
+
+    let imgUrl = '';
+    if (file) {
+      const uploadResponse = await this.fileUploadRepository.uploadImage(file);
+      imgUrl = uploadResponse.secure_url;
+    }
+
+    const product = this.productRepository.create({
+      ...dto,
+      imgUrl,
+      category,
+    });
+
     return this.productRepository.save(product);
   }
 
