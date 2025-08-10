@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common';
-import { FileUploadRepository } from './file-upload.repository';
-import { FileUploadController } from './files-upload.controller';
-import { FileUploadService } from './files-upload.service';
-import { cloudinaryConfig } from 'config/cloudinary';
-import { Products } from 'src/products/entities/product.entity';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MulterModule } from '@nestjs/platform-express';
+import { FilesUploadController } from './files-upload.controller';
+import { FilesUploadService } from './files-upload.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Products])],
-  controllers: [FileUploadController],
-  providers: [FileUploadService, cloudinaryConfig, FileUploadRepository],
-  exports: [FileUploadRepository],
+  imports: [
+    // memoria por defecto; si ya configuras multer en otro lado, puedes quitarlo
+    MulterModule.register({}),
+  ],
+  controllers: [FilesUploadController],
+  providers: [FilesUploadService],
+  exports: [FilesUploadService],
 })
-export class FileUploadModule {}
+export class FilesUploadModule {}

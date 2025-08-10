@@ -1,31 +1,46 @@
-import { Injectable } from '@nestjs/common';
-import { FileUploadRepository } from './file-upload.repository';
-import { Products } from 'src/products/entities/product.entity';
-import { Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
-import { NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 
 @Injectable()
-export class FileUploadService {
-  constructor(
-    private readonly fileUploadRepository: FileUploadRepository,
-    @InjectRepository(Products)
-    private readonly productsRepository: Repository<Products>,
-  ) {}
-
-  async uploadImage(file: Express.Multer.File, productId: string) {
-    const product = await this.productsRepository.findOneBy({ id: productId });
-
-    if (!product) {
-      throw new NotFoundException('Product not found');
-    }
-
-    const uploadResponse = await this.fileUploadRepository.uploadImage(file);
-
-    await this.productsRepository.update(product.id, {
-      imgUrl: uploadResponse.secure_url,
+export class FilesUploadService {
+  constructor() {
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+      secure: true,
     });
+  }
 
-    return await this.productsRepository.findOneBy({ id: productId });
+  async uploadProductImage(productId: string, file: Express.Multer.File) {
+    try {
+      const uploaded: UploadApiResponse = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'productos',
+            public_id: productId, // opcional: usa el id del producto
+            overwrite: true,
+            resource_type: 'image',
+          },
+          (error, result) => {
+            if (error) return reject(error);
+            if (!result) return reject(new Error('Empty Cloudinary response'));
+            resolve(result as UploadApiResponse);
+          },
+        );
+        stream.end(file.buffer);
+      });
+
+      // Aquí solo devolvemos la info. Si quieres guardar en BD, hazlo en tu ProductsService.
+      return {
+        productId,
+        imageUrl: uploaded.secure_url,
+        publicId: uploaded.public_id,
+      };
+    } catch (err: any) {
+      throw new InternalServerErrorException(
+        `Error subiendo la imagen: ${err?.message ?? err}`,
+      );
+    }
   }
 }
