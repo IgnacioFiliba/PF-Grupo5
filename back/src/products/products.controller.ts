@@ -1,37 +1,15 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  Delete,
-  Put,
-  Query,
-  UseGuards,
-  ParseUUIDPipe,
-  UploadedFile,
-  UseInterceptors,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Put, Query, UseGuards, ParseUUIDPipe, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { Roles } from 'src/interceptors/roles.decorator';
 import { Role } from 'src/auth/roles.enum';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiQuery,
-  ApiParam,
-  ApiBody,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiParam, ApiBody } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import {
-  FileTypeValidator,
-  MaxFileSizeValidator,
-  ParseFilePipe,
-} from '@nestjs/common/pipes';
+import { FileTypeValidator, MaxFileSizeValidator, ParseFilePipe } from '@nestjs/common/pipes';
+import { FindProductsQuery } from './dto/find-products.query';
+
 
 @ApiTags('Products')
 @Controller('products')
@@ -70,35 +48,21 @@ export class ProductsController {
     return this.productsService.seeder();
   }
 
-  @ApiOperation({ summary: 'Obtener productos paginados con búsqueda parcial' })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    example: 1,
-    description: 'Número de página',
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    example: 10,
-    description: 'Cantidad por página',
-  })
-  @ApiQuery({
-    name: 'search',
-    required: false,
-    example: 'bosch',
-    description:
-      'Texto a buscar (parcial, case-insensitive) en name, brand, model, description, engine y year',
-  })
+  // 🔹 Nuevo GET que unifica search + filtros
+  @ApiOperation({ summary: 'Obtener productos con búsqueda y filtros' })
+  @ApiQuery({ name: 'search', required: false, description: 'Texto parcial, case-insensitive' })
+  @ApiQuery({ name: 'brands', required: false, description: 'CSV o array de marcas' })
+  @ApiQuery({ name: 'inStock', required: false, description: 'true | false' })
+  @ApiQuery({ name: 'yearMin', required: false, type: Number })
+  @ApiQuery({ name: 'yearMax', required: false, type: Number })
+  @ApiQuery({ name: 'priceMin', required: false, type: Number })
+  @ApiQuery({ name: 'priceMax', required: false, type: Number })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   @Get()
-  getProducts(
-    @Query('page') page: string,
-    @Query('limit') limit: string,
-    @Query('search') search?: string,
-  ) {
-    const pageNumber = page ? parseInt(page, 10) : 1;
-    const limitNumber = limit ? parseInt(limit, 10) : 10;
-    return this.productsService.getProducts(pageNumber, limitNumber, search);
+  async getProducts(@Query() query: FindProductsQuery) {
+    const { items } = await this.productsService.findAllWithFilters(query);
+    return items; // devolvemos array para no romper front
   }
 
   @ApiOperation({ summary: 'Obtener producto por ID' })
@@ -159,10 +123,7 @@ export class ProductsController {
     return this.productsService.remove(id);
   }
 
-  // prueba de carga de datos en develop
-  @ApiOperation({
-    summary: 'Obtener producto por nombre (coincidencia exacta)',
-  })
+  @ApiOperation({ summary: 'Obtener producto por nombre (coincidencia exacta)' })
   @ApiParam({
     name: 'name',
     description: 'Nombre del producto',

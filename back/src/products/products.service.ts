@@ -6,6 +6,7 @@ import { Category } from 'src/categories/entities/category.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { FileUploadRepository } from 'src/files-upload/file-upload.repository';
 import { SearchProductDto } from './dto/search-product.dto';
+import { FindProductsQuery } from './dto/find-products.query'; // <-- NUEVO
 import data from '../seeds/products.json';
 
 @Injectable()
@@ -96,8 +97,7 @@ export class ProductsService {
     await this.productRepository.upsert(newProducts, ['name']);
   }
 
-  // MOD: Cambiamos la firma para aceptar 'search' y reemplazamos el find()+slice
-  // por un QueryBuilder que hace búsqueda parcial (ILIKE) y paginación en DB.
+  // MOD: búsqueda parcial (ILIKE) + paginación, sin romper el front
   async getProducts(
     page: number,
     limit: number,
@@ -107,25 +107,95 @@ export class ProductsService {
       .createQueryBuilder('p')
       .leftJoinAndSelect('p.category', 'c');
 
-    // Búsqueda parcial y case-insensitive en varios campos si viene 'search'
-    if (search && search.trim().length > 0) {
+    // Si hay término, filtra por varios campos (incluye category y year casteado)
+    const term = (search ?? '').trim();
+    if (term.length > 0) {
       qb.where(
-        `p.name ILIKE :term
-         OR p.brand ILIKE :term
-         OR p.model ILIKE :term
-         OR p.description ILIKE :term
-         OR p.engine ILIKE :term
-         OR p.year ILIKE :term`,
-        { term: `%${search.trim()}%` },
+        `
+          p.name ILIKE :term
+          OR p.brand ILIKE :term
+          OR p.model ILIKE :term
+          OR p.description ILIKE :term
+          OR p.engine ILIKE :term
+          OR c.name ILIKE :term
+          OR CAST(p.year AS TEXT) ILIKE :term
+        `,
+        { term: `%${term}%` },
       );
     }
 
-    // Paginación hecha por la base de datos
+    // Paginación en DB (mismo contrato de retorno: array de productos)
     qb.skip((page - 1) * limit).take(limit);
 
+    // Nota: no imponemos un orderBy para no cambiar el comportamiento del front
     return qb.getMany();
   }
   // END MOD
+
+  // NUEVO: unifica search + filtros + paginación (respuesta con meta)
+  async findAllWithFilters(q: FindProductsQuery): Promise<{
+    items: Products[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const {
+      search,
+      brands,
+      inStock,
+      yearMin,
+      yearMax,
+      priceMin,
+      priceMax,
+      page = 1,
+      limit = 12,
+    } = q;
+
+    const qb = this.productRepository
+      .createQueryBuilder('p')
+      .leftJoinAndSelect('p.category', 'c')
+      .orderBy('p.name', 'ASC');
+
+    // SEARCH: parcial + case-insensitive en varios campos (incluye categoría y año)
+    const term = (search ?? '').trim();
+    if (term.length > 0) {
+      qb.andWhere(
+        `(
+          p.name ILIKE :s OR
+          p.brand ILIKE :s OR
+          p.model ILIKE :s OR
+          p.description ILIKE :s OR
+          p.engine ILIKE :s OR
+          c.name ILIKE :s OR
+          CAST(p.year AS TEXT) ILIKE :s
+        )`,
+        { s: `%${term}%` },
+      );
+    }
+
+    // BRANDS
+    if (brands && brands.length > 0) {
+      qb.andWhere('p.brand IN (:...brands)', { brands });
+    }
+
+    // STOCK
+    if (inStock === 'true') qb.andWhere('p.stock > 0');
+    if (inStock === 'false') qb.andWhere('p.stock <= 0');
+
+    // RANGO AÑO
+    if (yearMin !== undefined) qb.andWhere('p.year >= :ymin', { ymin: yearMin });
+    if (yearMax !== undefined) qb.andWhere('p.year <= :ymax', { ymax: yearMax });
+
+    // RANGO PRECIO
+    if (priceMin !== undefined) qb.andWhere('p.price >= :pmin', { pmin: priceMin });
+    if (priceMax !== undefined) qb.andWhere('p.price <= :pmax', { pmax: priceMax });
+
+    // Paginación
+    qb.skip((page - 1) * limit).take(limit);
+
+    const [items, total] = await qb.getManyAndCount();
+    return { items, total, page, limit };
+  }
 
   async updateProduct(
     id: string,
