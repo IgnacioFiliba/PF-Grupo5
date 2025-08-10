@@ -10,7 +10,7 @@ import typeorm from 'config/typeorm';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CategoriesModule } from './categories/categories.module';
 import { OrdersModule } from './orders/orders.module';
-import { FileUploadModule } from './files-upload/files-upload.module';
+import { FilesUploadModule } from './files-upload/files-upload.module';
 import { JwtModule } from '@nestjs/jwt';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { SupplierModule } from './supplier/supplier.module';
@@ -31,7 +31,7 @@ import { StockEntryModule } from './stock-entry/stock-entry.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => config.get('typeorm')!,
     }),
-    FileUploadModule,
+    FilesUploadModule,
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET,
