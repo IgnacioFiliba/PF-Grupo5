@@ -25,6 +25,7 @@ import {
   ApiQuery,
   ApiParam,
   ApiBody,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -42,6 +43,44 @@ export class ProductsController {
   @ApiBearerAuth()
   @Roles(Role.ADMIN)
   @UseGuards(AuthGuard, RolesGuard)
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Datos para crear un nuevo producto con imagen',
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Imagen del producto (jpg, jpeg, png, webp)',
+        },
+        name: { type: 'string', example: 'Filtro de Aceite Bosch' },
+        price: { type: 'number', example: 29.99 },
+        stock: { type: 'integer', example: 100 },
+        imgUrl: { type: 'string', example: 'https://example.com/imagen.jpg' },
+        year: { type: 'string', example: '2024' },
+        brand: { type: 'string', example: 'Bosch' },
+        model: { type: 'string', example: 'XTR-5000' },
+        engine: { type: 'string', example: '2.0 Turbo' },
+        categoryId: {
+          type: 'string',
+          format: 'uuid',
+          example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+        },
+      },
+      required: [
+        'file',
+        'name',
+        'price',
+        'stock',
+        'year',
+        'brand',
+        'model',
+        'engine',
+        'categoryId',
+      ],
+    },
+  })
   @Post()
   @UseInterceptors(FileInterceptor('file'))
   create(
