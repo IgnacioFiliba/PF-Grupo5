@@ -60,7 +60,7 @@ export class UsersController {
   }
 
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Actualizar usuario por ID' })
+  @ApiOperation({ summary: 'Actualizar usuario por ID (solo Admin)' })
   @ApiParam({
     name: 'id',
     description: 'ID del usuario a actualizar',
@@ -75,13 +75,15 @@ export class UsersController {
           name: 'Ignacio Modificado',
           email: 'nuevo@example.com',
           city: 'Rosario',
-          isAdmin: true,
+          isAdmin: true,        // <- cambiar a admin
+          // isSuperAdmin: false // <- opcional
         },
       },
     },
   })
   @Put(':id')
-  @UseGuards(AuthGuard)
+  @Roles(Role.ADMIN)                 
+  @UseGuards(AuthGuard, RolesGuard) 
   update(@Param('id', ParseUUIDPipe) id: string, @Body() user: UpdateUserDto) {
     return this.usersService.update(id, user);
   }
