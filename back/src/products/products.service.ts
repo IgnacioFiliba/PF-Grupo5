@@ -183,12 +183,16 @@ export class ProductsService {
     if (inStock === 'false') qb.andWhere('p.stock <= 0');
 
     // RANGO AÑO
-    if (yearMin !== undefined) qb.andWhere('p.year >= :ymin', { ymin: yearMin });
-    if (yearMax !== undefined) qb.andWhere('p.year <= :ymax', { ymax: yearMax });
+    if (yearMin !== undefined)
+      qb.andWhere('p.year >= :ymin', { ymin: yearMin });
+    if (yearMax !== undefined)
+      qb.andWhere('p.year <= :ymax', { ymax: yearMax });
 
     // RANGO PRECIO
-    if (priceMin !== undefined) qb.andWhere('p.price >= :pmin', { pmin: priceMin });
-    if (priceMax !== undefined) qb.andWhere('p.price <= :pmax', { pmax: priceMax });
+    if (priceMin !== undefined)
+      qb.andWhere('p.price >= :pmin', { pmin: priceMin });
+    if (priceMax !== undefined)
+      qb.andWhere('p.price <= :pmax', { pmax: priceMax });
 
     // Paginación
     qb.skip((page - 1) * limit).take(limit);

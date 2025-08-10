@@ -1,15 +1,39 @@
-import { Controller, Get, Post, Body, Param, Delete, Put, Query, UseGuards, ParseUUIDPipe, UploadedFile, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  Put,
+  Query,
+  UseGuards,
+  ParseUUIDPipe,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { Roles } from 'src/interceptors/roles.decorator';
 import { Role } from 'src/auth/roles.enum';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiParam, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiQuery,
+  ApiParam,
+  ApiBody,
+  ApiConsumes,
+} from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { FileTypeValidator, MaxFileSizeValidator, ParseFilePipe } from '@nestjs/common/pipes';
+import {
+  FileTypeValidator,
+  MaxFileSizeValidator,
+  ParseFilePipe,
+} from '@nestjs/common/pipes';
 import { FindProductsQuery } from './dto/find-products.query';
-
 
 @ApiTags('Products')
 @Controller('products')
@@ -20,6 +44,44 @@ export class ProductsController {
   @ApiBearerAuth()
   @Roles(Role.ADMIN)
   @UseGuards(AuthGuard, RolesGuard)
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Datos para crear un nuevo producto con imagen',
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Imagen del producto (jpg, jpeg, png, webp)',
+        },
+        name: { type: 'string', example: 'Filtro de Aceite Bosch' },
+        price: { type: 'number', example: 29.99 },
+        stock: { type: 'integer', example: 100 },
+        imgUrl: { type: 'string', example: 'https://example.com/imagen.jpg' },
+        year: { type: 'string', example: '2024' },
+        brand: { type: 'string', example: 'Bosch' },
+        model: { type: 'string', example: 'XTR-5000' },
+        engine: { type: 'string', example: '2.0 Turbo' },
+        categoryId: {
+          type: 'string',
+          format: 'uuid',
+          example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+        },
+      },
+      required: [
+        'file',
+        'name',
+        'price',
+        'stock',
+        'year',
+        'brand',
+        'model',
+        'engine',
+        'categoryId',
+      ],
+    },
+  })
   @Post()
   @UseInterceptors(FileInterceptor('file'))
   create(
@@ -50,8 +112,16 @@ export class ProductsController {
 
   // 🔹 Nuevo GET que unifica search + filtros
   @ApiOperation({ summary: 'Obtener productos con búsqueda y filtros' })
-  @ApiQuery({ name: 'search', required: false, description: 'Texto parcial, case-insensitive' })
-  @ApiQuery({ name: 'brands', required: false, description: 'CSV o array de marcas' })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Texto parcial, case-insensitive',
+  })
+  @ApiQuery({
+    name: 'brands',
+    required: false,
+    description: 'CSV o array de marcas',
+  })
   @ApiQuery({ name: 'inStock', required: false, description: 'true | false' })
   @ApiQuery({ name: 'yearMin', required: false, type: Number })
   @ApiQuery({ name: 'yearMax', required: false, type: Number })
@@ -123,7 +193,9 @@ export class ProductsController {
     return this.productsService.remove(id);
   }
 
-  @ApiOperation({ summary: 'Obtener producto por nombre (coincidencia exacta)' })
+  @ApiOperation({
+    summary: 'Obtener producto por nombre (coincidencia exacta)',
+  })
   @ApiParam({
     name: 'name',
     description: 'Nombre del producto',
