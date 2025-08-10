@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Users } from './entities/user.entity';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -45,15 +46,16 @@ export class UsersService {
     return user;
   }
 
-  async update(id: string, user: Partial<Users>) {
-    if (!id) throw new BadRequestException('ID is required');
+  async update(id: string, dto: UpdateUserDto) {
+  if (!id) throw new BadRequestException('ID is required');
 
-    const foundUser = await this.usersRepository.findOneBy({ id });
-    if (!foundUser) throw new NotFoundException('User not found');
+  const user = await this.usersRepository.findOne({ where: { id } });
+  if (!user) throw new NotFoundException('User not found');
 
-    const updatedUser = Object.assign(foundUser, user);
-    return this.usersRepository.save(updatedUser);
-  }
+  Object.assign(user, dto);
+
+  return this.usersRepository.save(user);
+}
 
   async delete(id: string) {
     if (!id) throw new BadRequestException('ID is required');
