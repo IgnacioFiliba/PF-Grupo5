@@ -3,7 +3,7 @@
     "name": "Filtro de Aceite Bosch",
     "description": "Filtro de aceite para motores nafteros",
     "price": 15.99,
-    "stock": 25,
+    "stock": 0,
     "imgUrl": "https://example.com/filtro_aceite.jpg",
     "category": "filtro",
     "year": "2021",
