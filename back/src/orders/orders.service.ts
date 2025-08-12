@@ -14,6 +14,10 @@ import { Products } from 'src/products/entities/product.entity';
 
 @Injectable()
 export class OrdersService {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  updateStatus(external_reference: string | undefined, arg1: string) {
+    throw new Error('Method not implemented.');
+  }
   constructor(
     @InjectRepository(Users)
     private readonly usersRepository: Repository<Users>,
@@ -114,5 +118,14 @@ export class OrdersService {
         })),
       },
     };
+  }
+
+  async updateStatus(orderId: string, status: string) {
+    const order = await this.ordersRepository.findOneBy({ id: orderId });
+    if (!order) throw new NotFoundException('Order not found');
+
+    order.status = status;
+    await this.ordersRepository.save(order);
+    return order;
   }
 }
