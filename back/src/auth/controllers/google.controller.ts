@@ -18,5 +18,6 @@ export class GoogleAuthController {
     const loginData = await this.authService.googleLogin(user);
     const encodedData = encodeURIComponent(JSON.stringify(loginData));
     return res.redirect(`http://localhost:3000/home?data=${encodedData}`);
+    //prueba de carga a develop
   }
 }
