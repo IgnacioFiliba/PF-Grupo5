@@ -14,10 +14,6 @@ import { Products } from 'src/products/entities/product.entity';
 
 @Injectable()
 export class OrdersService {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  updateStatus(external_reference: string | undefined, arg1: string) {
-    throw new Error('Method not implemented.');
-  }
   constructor(
     @InjectRepository(Users)
     private readonly usersRepository: Repository<Users>,
@@ -38,26 +34,29 @@ export class OrdersService {
       id: createOrderDto.userId,
     });
     if (!user) {
-      throw new NotFoundException(`Incorrect user`);
+      throw new NotFoundException('User not found');
     }
 
-    if (!user) throw new NotFoundException('User not found');
-
+    // Crear orden base
     const order = this.ordersRepository.create({ user, date: new Date() });
     const newOrder = await this.ordersRepository.save(order);
 
+    // Calcular total y actualizar stock
     let total = 0;
 
     const productsArray: Products[] = await Promise.all(
-      createOrderDto.products.map(async ({ id }) => {
+      createOrderDto.products.map(async ({ id /*, quantity*/ }) => {
         const product = await this.productsRepository.findOneBy({ id });
-        if (!product)
+        if (!product) {
           throw new NotFoundException(`Product with ID ${id} not found`);
-        if (product.stock <= 0)
+        }
+        if (product.stock <= 0) {
           throw new BadRequestException(
             `Product "${product.name}" is out of stock`,
           );
+        }
 
+        // TODO: si manejan quantity en DTO, usarla aquí
         total += Number(product.price);
         product.stock -= 1;
         await this.productsRepository.save(product);
