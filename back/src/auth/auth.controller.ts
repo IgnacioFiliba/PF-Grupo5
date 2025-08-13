@@ -64,6 +64,7 @@ export class AuthController {
   @Post('/logout')
   @HttpCode(204)
   @ApiOperation({ summary: 'Cerrar sesión (borra token en front)' })
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   logout(@Req() _req: any) {
     return;
   }
