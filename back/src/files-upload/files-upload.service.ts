@@ -1,46 +1,64 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  InternalServerErrorException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
+
+import { Products } from 'src/products/entities/product.entity';
+import { FilesUploadRepository } from './files-upload.repository';
 
 @Injectable()
 export class FilesUploadService {
-  constructor() {
-    cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-      secure: true,
-    });
+  constructor(
+    private readonly filesUploadRepository: FilesUploadRepository,
+    @InjectRepository(Products)
+    private readonly productsRepository: Repository<Products>,
+  ) {}
+
+  /**
+   * Mantiene compatibilidad con el controlador que llama uploadProductImage(productId, image)
+   */
+  async uploadProductImage(
+    productId: string,
+    image: Express.Multer.File,
+  ): Promise<Products> {
+    return this.uploadImage(image, productId);
   }
 
-  async uploadProductImage(productId: string, file: Express.Multer.File) {
-    try {
-      const uploaded: UploadApiResponse = await new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          {
-            folder: 'productos',
-            public_id: productId, // opcional: usa el id del producto
-            overwrite: true,
-            resource_type: 'image',
-          },
-          (error, result) => {
-            if (error) return reject(error);
-            if (!result) return reject(new Error('Empty Cloudinary response'));
-            resolve(result as UploadApiResponse);
-          },
-        );
-        stream.end(file.buffer);
-      });
-
-      // Aquí solo devolvemos la info. Si quieres guardar en BD, hazlo en tu ProductsService.
-      return {
-        productId,
-        imageUrl: uploaded.secure_url,
-        publicId: uploaded.public_id,
-      };
-    } catch (err: any) {
-      throw new InternalServerErrorException(
-        `Error subiendo la imagen: ${err?.message ?? err}`,
-      );
+  /**
+   * Método interno genérico: sube imagen y actualiza imgUrl del producto
+   */
+  async uploadImage(
+    file: Express.Multer.File,
+    productId: string,
+  ): Promise<Products> {
+    if (!productId) {
+      throw new BadRequestException('Product ID is required');
     }
+    if (!file) {
+      throw new BadRequestException('No file provided');
+    }
+
+    const product = await this.productsRepository.findOne({
+      where: { id: productId },
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    let uploadResponse: UploadApiResponse;
+    try {
+      uploadResponse = await this.filesUploadRepository.uploadImage(file);
+    } catch {
+      throw new InternalServerErrorException('Error uploading image');
+    }
+
+    product.imgUrl = uploadResponse.secure_url;
+    await this.productsRepository.save(product);
+    return product;
   }
 }
