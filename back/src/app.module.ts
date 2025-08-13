@@ -15,6 +15,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { SupplierModule } from './supplier/supplier.module';
 import { StockEntryModule } from './stock-entry/stock-entry.module';
+import { CartModule } from './cart/cart.module'; // <-- ruta corregida
 
 @Module({
   imports: [
@@ -26,12 +27,18 @@ import { StockEntryModule } from './stock-entry/stock-entry.module';
     DashboardModule,
     SupplierModule,
     StockEntryModule,
+
     ConfigModule.forRoot({ isGlobal: true, load: [typeorm] }),
+
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => config.get('typeorm')!,
     }),
+
+    CartModule, // <-- va aquí, fuera de TypeOrmModule.forRootAsync
+
     FilesUploadModule,
+
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET,

@@ -119,13 +119,5 @@ export class OrdersService {
     };
   }
 
-  // ✅ ÚNICA implementación de updateStatus
-  async updateStatus(orderId: string, status: string) {
-    const order = await this.ordersRepository.findOneBy({ id: orderId });
-    if (!order) throw new NotFoundException('Order not found');
-
-    order.status = status;
-    await this.ordersRepository.save(order);
-    return order;
-  }
+  
 }
