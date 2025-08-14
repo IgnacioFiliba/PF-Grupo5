@@ -11,7 +11,7 @@ export class CartItem {
   @ManyToOne(() => Cart, (c) => c.items, { onDelete: 'CASCADE' })
   cart: Cart;
 
-  @ManyToOne(() => Products, { eager: true }) // si tu clase es Product, cámbialo
+  @ManyToOne(() => Products, { eager: true })
   product: Products;
 
   @Column({ type: 'int' })

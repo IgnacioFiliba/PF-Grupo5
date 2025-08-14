@@ -1,9 +1,9 @@
 import {
   Entity, PrimaryGeneratedColumn, Column, OneToMany,
-  ManyToOne, CreateDateColumn, UpdateDateColumn
+  ManyToOne, CreateDateColumn, UpdateDateColumn,
 } from 'typeorm';
 import { CartItem } from './cart-item.entity';
-import { Users } from '../../users/entities/user.entity';
+import { Users } from 'src/users/entities/user.entity';
 
 export type CartStatus = 'ACTIVE' | 'ABANDONED' | 'CONVERTED';
 
