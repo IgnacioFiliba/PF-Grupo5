@@ -1,4 +1,4 @@
-import { StockEntry } from 'src/stock-entry/entities/stock-entry.entity';
+import { StockEntry } from '../../stock-entry/entities/stock-entry.entity';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity({ name: 'SUPPLIERS' })

@@ -1,42 +1,36 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, OneToMany,
-  ManyToOne, CreateDateColumn, UpdateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { CartItem } from './cart-item.entity';
 import { Users } from 'src/users/entities/user.entity';
-
-export type CartStatus = 'ACTIVE' | 'ABANDONED' | 'CONVERTED';
+import { CartStatus } from '../cart.types';
 
 @Entity({ name: 'carts' })
 export class Cart {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Users, { nullable: true })
-  user?: Users | null;
-
-  @Column({ type: 'varchar', length: 10, default: 'ACTIVE' })
+  @Column({ type: 'varchar', length: 20, default: CartStatus.OPEN })
   status: CartStatus;
 
-  @Column({ type: 'varchar', length: 3, default: 'USD' })
-  currency: string;
+  // ✅ The decorator must be immediately followed by a field declaration
+  @ManyToOne(() => Users, { nullable: true, eager: true })
+  @JoinColumn({ name: 'user_id' })
+  user: Users | null;
 
-  // numeric como string para no perder precisión
-  @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
-  subtotal: string;
-
-  @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
-  total: string;
-
-  @Column({ type: 'timestamptz', nullable: true })
-  lastValidatedAt?: Date;
-
-  @OneToMany(() => CartItem, (ci) => ci.cart, { cascade: true })
+  @OneToMany(() => CartItem, (item) => item.cart, { cascade: true, eager: false })
   items: CartItem[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

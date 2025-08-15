@@ -1,151 +1,106 @@
 import {
-  Body, Controller, Post, Get, Patch, Delete,
-  Param, Req, Res, UseGuards, HttpCode, HttpStatus
+  Controller, Post, Get, Patch, Delete, Param, Body, Req,
 } from '@nestjs/common';
-import { Response } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-
+import { Request } from 'express';
 import { CartService } from './cart.service';
-import { AddItemDto } from './dto/add-item.dto';
-import { UpdateQuantityDto } from './dto/update-quantity.dto';
-import { AuthGuard } from 'src/auth/auth.guard';
+
+class AddItemDto {
+  productId!: string;
+  quantity!: number;
+  // opcional si aún no tienes JWT conectado:
+  userId?: string;
+}
+class UpdateQtyDto {
+  quantity!: number; // 0 = eliminar
+}
 
 @ApiTags('Cart')
+@ApiBearerAuth()
 @Controller('cart')
 export class CartController {
-  constructor(private readonly cartsService: CartService) {}
+  constructor(private readonly cartService: CartService) {}
 
-  // --- helpers ---
-  private async resolveCart(req: any) {
-    const userId = req.user?.id;
-    const cookieCartId = req.cookies?.cart_id;
-    return this.cartsService.getOrCreateCart({ userId, cookieCartId });
+  private getUserId(req: Request) {
+    // Si tienes guard que añade req.user.sub, úsalo. Si no, deja userId vacío (guest).
+    return (req as any)?.user?.sub ?? undefined;
   }
 
-  private mapForFront(cart: any) {
-    return {
-      id: cart.id,
-      status: cart.status,
-      subtotal: Number(cart.subtotal),
-      total: Number(cart.total),
-      currency: cart.currency,
-      items: (cart.items ?? []).map((it) => ({
-        id: it.id,
-        quantity: it.quantity,
-        unitPrice: Number(it.unitPriceCurrent),
-        lineTotal: Number(it.unitPriceCurrent) * it.quantity,
-        isValid: it.isValid,
-        product: {
-          id: it.product.id,
-          name: it.productNameSnapshot ?? (it.product as any).name,
-          price: Number(it.unitPriceCurrent),
-          imageUrl: it.imageUrlSnapshot ?? (it.product as any).imageUrl ?? null,
-        },
-      })),
-      lastValidatedAt: cart.lastValidatedAt,
-      updatedAt: cart.updatedAt,
-    };
-  }
-
-  // --- rutas ---
-
-  // Crear carrito invitado (y setear cookie)
-  @Post()
   @ApiOperation({ summary: 'Crear carrito (invitado)' })
-  @HttpCode(HttpStatus.CREATED)
-  async create(@Res({ passthrough: true }) res: Response) {
-    const cart = await this.cartsService.getOrCreateCart({});
-    this.cartsService.attachGuestCookie(res, cart.id);
-    return this.mapForFront(cart);
+  @Post()
+  async createCart(@Req() req: Request) {
+    const userId = this.getUserId(req);
+    const cart = await this.cartService.getOrCreateCart({ userId, allowCreate: true });
+    return this.cartService.buildCartView(cart);
   }
 
-  // Alias de lectura del carrito actual (guest/usuario)
+  @ApiOperation({ summary: 'Obtener el carrito vigente (alias de /cart/me). No revalida precios/stock.' })
   @Get()
-  @ApiOperation({ summary: 'Obtener el carrito vigente (alias de /cart/me)' })
-  async getAlias(@Req() req: any, @Res({ passthrough: true }) res: Response) {
-    return this.me(req, res);
+  async getCart(@Req() req: Request) {
+    const userId = this.getUserId(req);
+    const cart = await this.cartService.getOrCreateCart({ userId, allowCreate: true });
+    return this.cartService.buildCartView(cart);
   }
 
-  // Obtener carrito actual (por cookie o user)
-  @Get('me')
-  @ApiOperation({
-    summary:
-      "Obtener el carrito vigente (guest o usuario); si no existe, lo crea. Renueva la cookie 'cart_id'. No revalida precios/stock.",
-  })
-  async me(@Req() req: any, @Res({ passthrough: true }) res: Response) {
-    const cart = await this.resolveCart(req);
-    this.cartsService.attachGuestCookie(res, cart.id); // refresca vigencia
-    return this.mapForFront(cart);
-  }
-
-  // Agregar item (suma cantidad si ya existe)
-  @Post('items')
-  @ApiOperation({ summary: 'Agregar item al carrito' })
-  async addItem(@Req() req: any, @Body() dto: AddItemDto) {
-    const cart = await this.resolveCart(req);
-    const updated = await this.cartsService.addItem(cart, dto);
-    return this.mapForFront(updated);
-  }
-
-  // Cambiar cantidad (0 = eliminar)
-  @Patch('items/:itemId')
-  @ApiOperation({ summary: 'Actualizar cantidad de un item (0 = eliminar)' })
-  async updateQty(
-    @Req() req: any,
-    @Param('itemId') itemId: string,
-    @Body() dto: UpdateQuantityDto,
-  ) {
-    const cart = await this.resolveCart(req);
-    const updated = await this.cartsService.updateQuantity(cart, itemId, dto);
-    return this.mapForFront(updated);
-  }
-
-  // Eliminar item
-  @Delete('items/:itemId')
-  @ApiOperation({ summary: 'Eliminar item del carrito' })
-  async remove(@Req() req: any, @Param('itemId') itemId: string) {
-    const cart = await this.resolveCart(req);
-    const updated = await this.cartsService.removeItem(cart, itemId);
-    return this.mapForFront(updated);
-  }
-
-  // Vaciar carrito (ADICIÓN)
-  @Delete()
   @ApiOperation({ summary: 'Vaciar el carrito (elimina todos los items)' })
-  async clear(@Req() req: any) {
-    const cart = await this.resolveCart(req);
-    const updated = await this.cartsService.clearCart(cart.id);
-    return this.mapForFront(updated);
+  @Delete()
+  async clear(@Req() req: Request) {
+    const userId = this.getUserId(req);
+    return this.cartService.clearCart({ userId });
   }
 
-  // Revalidar todo (precio/stock)
-  @Post('refresh')
+  @ApiOperation({ summary: "Obtener el carrito vigente (guest o usuario); si no existe, lo crea." })
+  @Get('me')
+  async getMe(@Req() req: Request) {
+    const userId = this.getUserId(req);
+    const cart = await this.cartService.getOrCreateCart({ userId, allowCreate: true });
+    return this.cartService.buildCartView(cart);
+  }
+
+  @ApiOperation({ summary: 'Agregar item al carrito' })
+  @Post('items')
+  async addItem(@Body() body: AddItemDto, @Req() req: Request) {
+    const userId = this.getUserId(req) ?? body.userId; // fallback mientras conectas JWT
+    return this.cartService.addItem({ userId, productId: body.productId, quantity: Number(body.quantity) || 1 });
+  }
+
+  @ApiOperation({ summary: 'Actualizar cantidad de un item (0 = eliminar)' })
+  @Patch('items/:itemId')
+  async updateQty(@Param('itemId') itemId: string, @Body() body: UpdateQtyDto, @Req() req: Request) {
+    const userId = this.getUserId(req);
+    return this.cartService.updateItemQty({ userId, itemId, quantity: Number(body.quantity) || 0 });
+  }
+
+  @ApiOperation({ summary: 'Eliminar item del carrito' })
+  @Delete('items/:itemId')
+  async removeItem(@Param('itemId') itemId: string, @Req() req: Request) {
+    const userId = this.getUserId(req);
+    return this.cartService.removeItem({ userId, itemId });
+  }
+
   @ApiOperation({ summary: 'Revalidar carrito (precio/stock)' })
-  async refresh(@Req() req: any) {
-    const cart = await this.resolveCart(req);
-    const result = await this.cartsService.refresh(cart.id);
-    return { cart: this.mapForFront(result.cart), changes: result.changes };
+  @Post('refresh')
+  async refresh(@Req() req: Request) {
+    const userId = this.getUserId(req);
+    return this.cartService.refresh({ userId });
   }
 
-  // Fusionar carrito invitado -> usuario al iniciar sesión
-  @Post('merge')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'Fusionar carrito de invitado con el del usuario' })
-  async merge(@Req() req: any) {
-    const userCart = await this.cartsService.getOrCreateCart({ userId: req.user.id });
-    const guestCartId = req.cookies?.cart_id;
-    if (!guestCartId || guestCartId === userCart.id) return this.mapForFront(userCart);
-    const merged = await this.cartsService.mergeCarts(userCart.id, guestCartId);
-    return this.mapForFront(merged);
+  @Post('merge')
+  async merge(@Req() req: Request) {
+    const userId = this.getUserId(req);
+    if (!userId) {
+      // si no hay usuario autenticado, no hay nada que fusionar en el modelo actual
+      const cart = await this.cartService.getOrCreateCart({ userId: undefined, allowCreate: true });
+      return this.cartService.buildCartView(cart);
+    }
+    return this.cartService.mergeGuestIntoUser({ userId, guestCartId: null });
   }
 
-  // Validación estricta previa a checkout
-  @Post('checkout/validate')
   @ApiOperation({ summary: 'Validar carrito antes de checkout' })
-  async validate(@Req() req: any) {
-    const cart = await this.resolveCart(req);
-    const validated = await this.cartsService.validateBeforeCheckout(cart.id);
-    return this.mapForFront(validated);
+  @Post('checkout/validate')
+  async validate(@Req() req: Request) {
+    const userId = this.getUserId(req);
+    return this.cartService.validateBeforeCheckout({ userId });
   }
 }

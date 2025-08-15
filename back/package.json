@@ -23,7 +23,11 @@
     "migration:generate": "npm run typeorm -- -d ./src/config/typeorm.ts migration:generate ",
     "migration:create": "npm run typeorm migration:create ",
     "migration:revert": "npm run typeorm -- -d ./src/config/typeorm.ts migration:revert",
-    "migration:show": "npm run typeorm -- -d ./src/config/typeorm.ts migration:show"
+    "migration:show": "npm run typeorm -- -d ./src/config/typeorm.ts migration:show",
+    "typeorm:dist": "node -r module-alias/register ./node_modules/typeorm/cli.js",
+    "migration:run:dist": "npm run typeorm:dist -- migration:run -d dist/config/typeorm.js",
+    "migration:revert:dist": "npm run typeorm:dist -- migration:revert -d dist/config/typeorm.js",
+    "migration:show:dist": "npm run typeorm:dist -- migration:show -d dist/config/typeorm.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -44,6 +48,7 @@
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.2.0",
     "mercadopago": "^2.8.0",
+    "module-alias": "^2.2.3",
     "multer": "^2.0.1",
     "multer-storage-cloudinary": "^4.0.0",
     "passport": "^0.7.0",

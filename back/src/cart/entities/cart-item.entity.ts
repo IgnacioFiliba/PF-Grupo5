@@ -1,8 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Unique } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, ManyToOne, Column, Unique } from 'typeorm';
 import { Cart } from './cart.entity';
-import { Products } from 'src/products/entities/product.entity'; // ajusta a Product si tu clase es singular
+import { Products } from 'src/products/entities/product.entity';
 
-@Entity({ name: 'cart_items' })
+@Entity('cart_items')
 @Unique(['cart', 'product'])
 export class CartItem {
   @PrimaryGeneratedColumn('uuid')
@@ -14,21 +14,13 @@ export class CartItem {
   @ManyToOne(() => Products, { eager: true })
   product: Products;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'int', default: 1 })
   quantity: number;
 
-  @Column({ type: 'numeric', precision: 12, scale: 2 })
-  unitPriceAtAdd: string;
+  // snapshot del precio en el momento de agregar
+  @Column({ type: 'numeric', precision: 10, scale: 2, nullable: true, default: 0 })
+unitPrice: string | null;
 
-  @Column({ type: 'numeric', precision: 12, scale: 2 })
-  unitPriceCurrent: string;
-
-  @Column({ type: 'text', nullable: true })
-  productNameSnapshot?: string;
-
-  @Column({ type: 'text', nullable: true })
-  imageUrlSnapshot?: string;
-
-  @Column({ type: 'boolean', default: true })
-  isValid: boolean;
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  lineTotal: string;
 }
