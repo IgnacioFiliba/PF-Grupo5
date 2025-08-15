@@ -20,6 +20,12 @@ export class Orders {
   @Column({ default: 'approved' })
   status: string;
 
+  @Column({ name: 'mp_preference_id', nullable: true })
+  mpPreferenceId?: string;
+
+  @Column({ name: 'mp_payment_id', nullable: true })
+  mpPaymentId?: string;
+
   @OneToOne(() => OrderDetails, (orderDetails) => orderDetails.order)
   orderDetails: OrderDetails;
 

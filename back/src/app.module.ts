@@ -16,6 +16,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { SupplierModule } from './supplier/supplier.module';
 import { StockEntryModule } from './stock-entry/stock-entry.module';
 import { CartModule } from './cart/cart.module'; // <-- ruta corregida
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { CartModule } from './cart/cart.module'; // <-- ruta corregida
     DashboardModule,
     SupplierModule,
     StockEntryModule,
-
+    PaymentsModule,
     ConfigModule.forRoot({ isGlobal: true, load: [typeorm] }),
 
     TypeOrmModule.forRootAsync({
