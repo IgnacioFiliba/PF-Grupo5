@@ -4,24 +4,23 @@ import { DataSource, DataSourceOptions } from 'typeorm';
 
 dotenvconfig();
 
-const isProd = process.env.NODE_ENV === 'production';
-
-const config: DataSourceOptions = {
+const config = {
   type: 'postgres',
   host: process.env.DB_HOST,
-  port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432,
+  port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 
   // Nunca sincronizar con datos reales; usa migraciones
-  synchronize: false,
+  dropSchema: false,
+  synchronize: true,
   logging: true,
 
   // En dev usamos TS directo; en prod/dist usamos los JS compilados
-  entities: isProd ? ['dist/src/**/*.entity.js'] : ['src/**/*.entity.ts'],
-  migrations: isProd ? ['dist/src/migrations/**/*.js'] : ['src/migrations/**/*.ts'],
+  entities: ['dist/**/*.entity{.ts,.js}'],
+  migrations: ['dist/migrations/**/*{.ts,.js}'],
 };
 
 export default registerAs('typeorm', () => config);
-export const connectionSource = new DataSource(config);
+export const connectionSource = new DataSource(config as DataSourceOptions);
