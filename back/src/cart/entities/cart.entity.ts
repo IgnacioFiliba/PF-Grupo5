@@ -1,36 +1,20 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  OneToMany,
-  ManyToOne,
-  JoinColumn,
-  CreateDateColumn,
-  UpdateDateColumn,
+  Entity, PrimaryGeneratedColumn, Column, OneToMany, Index
 } from 'typeorm';
 import { CartItem } from './cart-item.entity';
-import { Users } from 'src/users/entities/user.entity';
-import { CartStatus } from '../cart.types';
 
-@Entity({ name: 'carts' })
+@Entity({ name: 'CARTS' })
+@Index(['userId'])
 export class Cart {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', length: 20, default: CartStatus.OPEN })
-  status: CartStatus;
+  @Column('uuid')
+  userId: string;
 
-  // ✅ The decorator must be immediately followed by a field declaration
-  @ManyToOne(() => Users, { nullable: true, eager: true })
-  @JoinColumn({ name: 'user_id' })
-  user: Users | null;
-
-  @OneToMany(() => CartItem, (item) => item.cart, { cascade: true, eager: false })
+  @OneToMany(() => CartItem, (i) => i.cart, { cascade: true })
   items: CartItem[];
 
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
-
-  @UpdateDateColumn({ name: 'updated_at' })
+  @Column({ type: 'timestamptz', default: () => 'now()' })
   updatedAt: Date;
 }

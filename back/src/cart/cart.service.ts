@@ -1,245 +1,299 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Cart } from './entities/cart.entity';
 import { CartItem } from './entities/cart-item.entity';
 import { Products } from 'src/products/entities/product.entity';
-import { CartStatus } from './cart.types';
+import { AddItemDto } from './dto/add-item.dto';
+import { CartView, CartItemView } from './types/cart-view';
 
 @Injectable()
 export class CartService {
   constructor(
     @InjectRepository(Cart) private readonly cartRepo: Repository<Cart>,
-    @InjectRepository(CartItem) private readonly cartItemRepo: Repository<CartItem>,
+    @InjectRepository(CartItem) private readonly itemRepo: Repository<CartItem>,
     @InjectRepository(Products) private readonly productRepo: Repository<Products>,
-    // ❌ Eliminado: @InjectRepository(Users) private readonly userRepo: Repository<Users>,
   ) {}
 
-  /**
-   * Devuelve SIEMPRE un carrito OPEN (lo crea si allowCreate = true).
-   * - Si viene userId: carrito de ese usuario.
-   * - Si no: carrito de invitado (user IS NULL). (Modelo simple: 1 guest cart global)
-   */
-  async getOrCreateCart(params: { userId?: string; allowCreate: boolean }): Promise<Cart> {
-    const { userId, allowCreate } = params;
+  // ---------- helpers ----------
+  private toNum(n: any): number {
+    if (n === null || n === undefined) return 0;
+    if (typeof n === 'number') return n;
+    const p = parseFloat(String(n));
+    return Number.isFinite(p) ? p : 0;
+  }
 
-    if (userId) {
-      let cart = await this.cartRepo.findOne({
-        where: { user: { id: userId }, status: CartStatus.OPEN },
-        relations: ['items', 'items.product'],
-      });
+  private money(n: any): number {
+    const v = this.toNum(n);
+    return Number(v.toFixed(2));
+  }
 
-      if (!cart && allowCreate) {
-        // ⚠️ No necesitamos cargar Users desde repo; basta con setear la relación por id.
-        cart = this.cartRepo.create({
-          status: CartStatus.OPEN,
-          user: { id: userId } as any,
-          items: [],
-        });
-        cart = await this.cartRepo.save(cart);
-      }
-      if (!cart) throw new NotFoundException('Open cart not found for user');
-      return cart;
+  private async findOrCreateCart(userId: string): Promise<Cart> {
+    let cart = await this.cartRepo.findOne({ where: { userId } });
+    if (!cart) {
+      cart = this.cartRepo.create({ userId, items: [] });
+      await this.cartRepo.save(cart);
     }
-
-    // Invitado: un OPEN cart con user IS NULL (modelo simple)
-    let cart = await this.cartRepo.findOne({
-      where: { user: IsNull(), status: CartStatus.OPEN },
-      relations: ['items', 'items.product'],
-    });
-
-    if (!cart && allowCreate) {
-      cart = this.cartRepo.create({
-        status: CartStatus.OPEN,
-        user: null as any,
-        items: [],
-      });
-      cart = await this.cartRepo.save(cart);
-    }
-    if (!cart) throw new NotFoundException('Open guest cart not found');
     return cart;
   }
 
-  /** Proyección amigable para UI y Mercado Pago */
-  buildCartView(cart: Cart) {
-    const items = (cart.items ?? []).map((i) => {
-      const p: any = i.product as any;
-      const price = Number(p.price) || 0;
+  private async loadCartWithItems(userId: string): Promise<Cart> {
+    const cart = await this.cartRepo.findOne({
+      where: { userId },
+      relations: ['items'],
+      order: { updatedAt: 'DESC' },
+    });
+    return cart ?? this.cartRepo.create({ userId, items: [] });
+  }
+
+  private async mapToView(cart: Cart): Promise<CartView> {
+    const items = cart.items ?? [];
+
+    // Traer productos actuales
+    const productIds = items.map((i) => i.productId);
+    const products = productIds.length
+      ? await this.productRepo.find({ where: { id: In(productIds) } })
+      : [];
+    const prodMap = new Map(products.map((p) => [p.id, p]));
+
+    const viewItems: CartItemView[] = items.map((i) => {
+      const p = prodMap.get(i.productId);
+      const currentPrice = this.toNum(p?.price);
+      const stock = this.toNum(p?.stock);
+
+      const outOfStock = !p || stock <= 0;
+      const insufficientStock = !outOfStock && i.quantity > stock;
+      const priceChanged =
+        !!p && this.money(i.unitPriceSnapshot) !== this.money(currentPrice);
+
+      // para mostrar: limitamos a stock si hace falta (no persistimos este cap aquí)
+      const quantity = insufficientStock ? stock : i.quantity;
+
+      // si no hay producto o stock, cantidad segura 0 para no romper UI
+      const safeQty = outOfStock ? 0 : quantity;
+
+      const unitNow = this.money(currentPrice);
+      const lineNow = this.money(safeQty * currentPrice);
+
       return {
-        itemId: i.id,
-        productId: i.product.id,
-        name: p.name ?? p.title ?? 'Producto',
-        image: p.imgUrl ?? p.imageUrl ?? null, // tu entidad usa imgUrl
-        price,
-        quantity: i.quantity,
-        lineTotal: price * i.quantity,
-      };
+        id: i.id,
+        productId: i.productId,
+        name: p?.name ?? 'Producto no disponible',
+        imgUrl: p?.imgUrl,
+        quantity: safeQty,
+        unitPriceSnapshot: this.money(i.unitPriceSnapshot),
+        unitPriceCurrent: unitNow,
+        lineTotalCurrent: lineNow,
+
+        // aliases para compatibilidad con el front (evita undefined.toFixed)
+        unitPrice: unitNow,
+        lineTotal: lineNow,
+
+        // aliases adicionales muy comunes en UIs
+        price: unitNow,
+        total: lineNow,
+        amount: lineNow,
+
+        flags: { priceChanged, insufficientStock, outOfStock },
+      } as any;
     });
 
-    const subtotal = items.reduce((s, it) => s + it.lineTotal, 0);
-    const total = subtotal; // agrega impuestos/envío si aplica
+    const invalidItemsCount = viewItems.filter(
+      (v) => v.flags.outOfStock || v.flags.insufficientStock || v.flags.priceChanged,
+    ).length;
 
-    const mpItems = items.map((i) => ({
-      title: i.name,
-      quantity: i.quantity,
-      unit_price: i.price,
-      currency_id: 'COP', // ajusta moneda si es necesario
-      picture_url: i.image ?? undefined,
-    }));
+    const subtotal = this.money(
+      viewItems.reduce((acc, v) => acc + this.toNum(v.lineTotal), 0),
+    );
+    const tax = 0;
+    const discount = 0;
+    const total = this.money(subtotal + tax - discount);
 
-    return { id: cart.id, status: cart.status, items, subtotal, total, mpItems };
+    return {
+      id: cart.id ?? null,
+      userId: cart.userId,
+      items: viewItems,
+      summary: {
+        subtotal,
+        discount,
+        tax,
+        total,
+        currency: 'USD',
+        invalidItemsCount,
+        // alias para front
+        subTotal: subtotal,
+        grandTotal: total,
+      } as any,
+    };
   }
 
-  /** Agregar producto (crea carrito si no existe). Suma cantidad si ya está. */
-  async addItem(params: { userId?: string; productId: string; quantity: number }) {
-    const { userId, productId, quantity } = params;
-    const cart = await this.getOrCreateCart({ userId, allowCreate: true });
+  // ---------- API ----------
 
-    const product = await this.productRepo.findOne({ where: { id: productId } });
-    if (!product) throw new NotFoundException('Product not found');
+  async getCart(userId: string): Promise<CartView> {
+    const cart = await this.loadCartWithItems(userId);
+    return this.mapToView(cart);
+  }
 
-    // (opcional) validar stock: si tu Products tiene `stock`
-    if (typeof (product as any).stock === 'number') {
-      const existingQty =
-        (await this.cartItemRepo.findOne({
-          where: { cart: { id: cart.id }, product: { id: product.id } },
-        }))?.quantity ?? 0;
-      const want = existingQty + quantity;
-      if ((product as any).stock < want) {
-        throw new BadRequestException(`Stock insuficiente. Disponible: ${(product as any).stock}`);
-      }
+  async addItem(userId: string, dto: AddItemDto): Promise<CartView> {
+    const qtyReq = Math.max(1, this.toNum(dto.quantity));
+    const product = await this.productRepo.findOne({
+      where: { id: dto.productId },
+    });
+    if (!product || this.toNum(product.stock) <= 0) {
+      throw new ConflictException({
+        code: 'CART_OUT_OF_STOCK',
+        message: 'Producto sin stock.',
+      });
     }
 
-    const existing = await this.cartItemRepo.findOne({
-      where: { cart: { id: cart.id }, product: { id: product.id } },
-      relations: ['product', 'cart'],
+    const cart = await this.findOrCreateCart(userId);
+    let item = await this.itemRepo.findOne({
+      where: { cartId: cart.id, productId: dto.productId },
     });
 
-    if (existing) {
-      existing.quantity += quantity;
-      await this.cartItemRepo.save(existing);
+    const price = this.toNum(product.price);
+    const stock = this.toNum(product.stock);
+
+    if (!item) {
+      const qty = Math.min(qtyReq, stock);
+      if (qty <= 0)
+        throw new ConflictException({ code: 'CART_OUT_OF_STOCK' });
+      item = this.itemRepo.create({
+        cartId: cart.id,
+        productId: dto.productId,
+        quantity: qty,
+        unitPriceSnapshot: price,
+      });
+      item.cart = cart; // asegura la relación para que TypeORM no intente NULL
     } else {
-      const item = this.cartItemRepo.create({ cart, product, quantity });
-      await this.cartItemRepo.save(item);
+      const newQty = Math.min(item.quantity + qtyReq, stock);
+      if (newQty <= 0)
+        throw new ConflictException({ code: 'CART_OUT_OF_STOCK' });
+      item.quantity = newQty;
+      item.unitPriceSnapshot = price; // refrescamos snapshot
+      item.cart = cart; // refuerza la FK al actualizar
     }
 
-    cart.items = await this.cartItemRepo.find({ where: { cart: { id: cart.id } }, relations: ['product'] });
-    this.recalcCartTotals(cart);
+    await this.itemRepo.save(item);
+    cart.updatedAt = new Date();
     await this.cartRepo.save(cart);
 
-    return this.buildCartView(cart);
-  }
-
-  /** Actualizar cantidad por itemId (0 = eliminar) */
-  async updateItemQty(params: { userId?: string; itemId: string; quantity: number }) {
-    const { userId, itemId, quantity } = params;
-    const cart = await this.getOrCreateCart({ userId, allowCreate: true });
-
-    const item = await this.cartItemRepo.findOne({
-      where: { id: itemId, cart: { id: cart.id } },
-      relations: ['product'],
+    const fresh = await this.cartRepo.findOne({
+      where: { id: cart.id },
+      relations: ['items'],
     });
-    if (!item) throw new NotFoundException('Item not found in cart');
+    return this.mapToView(fresh!);
+  }
 
-    if (quantity === 0) {
-      await this.cartItemRepo.remove(item);
+  async updateItemQty(
+    userId: string,
+    productId: string,   // sigue aceptando productId
+    qty: number,
+  ): Promise<CartView> {
+    const cart = await this.findOrCreateCart(userId);
+
+    // Buscar por productId dentro del carrito del usuario
+    const item = await this.itemRepo.findOne({
+      where: { productId, cartId: cart.id },
+    });
+    if (!item) throw new NotFoundException('Item no encontrado en tu carrito');
+
+    const q = Math.max(0, this.toNum(qty));
+
+    if (q === 0) {
+      await this.itemRepo.delete({ id: item.id });
     } else {
-      // (opcional) validar stock
-      const p: any = item.product as any;
-      if (typeof p.stock === 'number' && p.stock < quantity) {
-        throw new BadRequestException(`Stock insuficiente. Disponible: ${p.stock}`);
-      }
-      item.quantity = Math.max(1, Number(quantity) || 1);
-      await this.cartItemRepo.save(item);
+      const product = await this.productRepo.findOne({
+        where: { id: item.productId },
+      });
+      if (!product)
+        throw new ConflictException({
+          code: 'CART_OUT_OF_STOCK',
+          message: 'Producto inexistente.',
+        });
+      const stock = this.toNum(product.stock);
+      if (stock <= 0)
+        throw new ConflictException({ code: 'CART_OUT_OF_STOCK' });
+      if (q > stock)
+        throw new ConflictException({
+          code: 'CART_INSUFFICIENT_STOCK',
+          available: stock,
+        });
+
+      item.quantity = q;
+      item.unitPriceSnapshot = this.toNum(product.price);
+      item.cart = cart; // por consistencia, mantenemos la relación
+      await this.itemRepo.save(item);
     }
 
-    cart.items = await this.cartItemRepo.find({ where: { cart: { id: cart.id } }, relations: ['product'] });
-    this.recalcCartTotals(cart);
+    cart.updatedAt = new Date();
     await this.cartRepo.save(cart);
-    return this.buildCartView(cart);
+    const fresh = await this.cartRepo.findOne({
+      where: { id: cart.id },
+      relations: ['items'],
+    });
+    return this.mapToView(fresh!);
   }
 
-  /** Eliminar item por itemId */
-  async removeItem(params: { userId?: string; itemId: string }) {
-    return this.updateItemQty({ ...params, quantity: 0 });
-  }
+  // ✅ ahora también borra por productId (sin cambiar nombres/firmas)
+  async removeItem(userId: string, itemId: string): Promise<void> {
+    const cart = await this.findOrCreateCart(userId);
 
-  /** Vaciar carrito */
-  async clearCart(params: { userId?: string }) {
-    const { userId } = params;
-    const cart = await this.getOrCreateCart({ userId, allowCreate: true });
+    // 1) intenta por CartItem.id
+    let item = await this.itemRepo.findOne({
+      where: { id: itemId, cartId: cart.id },
+    });
 
-    const items = await this.cartItemRepo.find({ where: { cart: { id: cart.id } } });
-    if (items.length) await this.cartItemRepo.remove(items);
-
-    cart.items = [];
-    this.recalcCartTotals(cart);
-    await this.cartRepo.save(cart);
-    return this.buildCartView(cart);
-  }
-
-  /** Revalidar carrito contra precios/stock actuales */
-  async refresh(params: { userId?: string }) {
-    const { userId } = params;
-    const cart = await this.getOrCreateCart({ userId, allowCreate: true });
-
-    for (const item of cart.items ?? []) {
-      const p = await this.productRepo.findOne({ where: { id: item.product.id } });
-      if (!p) continue;
-      // clamp por stock si existe
-      const stock = (p as any).stock;
-      if (typeof stock === 'number' && stock < item.quantity) {
-        item.quantity = stock;
-        await this.cartItemRepo.save(item);
-      }
+    // 2) si no existe, intenta por productId dentro del carrito del usuario
+    if (!item) {
+      item = await this.itemRepo.findOne({
+        where: { productId: itemId, cartId: cart.id },
+      });
     }
 
-    cart.items = await this.cartItemRepo.find({ where: { cart: { id: cart.id } }, relations: ['product'] });
-    this.recalcCartTotals(cart);
+    if (!item) return; // se mantiene el 204 si no existe
+
+    await this.itemRepo.delete({ id: item.id });
+    cart.updatedAt = new Date();
     await this.cartRepo.save(cart);
-    return this.buildCartView(cart);
   }
 
-  /** Validación antes de checkout (precios/stock) */
-  async validateBeforeCheckout(params: { userId?: string }) {
-    const { userId } = params;
-    const cart = await this.getOrCreateCart({ userId, allowCreate: true });
-
-    const errors: string[] = [];
-    for (const it of cart.items ?? []) {
-      const p: any = await this.productRepo.findOne({ where: { id: it.product.id } });
-      if (!p) {
-        errors.push(`Producto ${it.product.id} no existe`);
-        continue;
-      }
-      if (typeof p.stock === 'number' && p.stock < it.quantity) {
-        errors.push(`Stock insuficiente para ${p.name ?? p.title ?? it.product.id}`);
-      }
-      // Si manejas snapshot de precio, aquí compararías it.unitPrice vs p.price.
-    }
-
-    const view = this.buildCartView(cart);
-    return { ok: errors.length === 0, errors, cart: view };
-  }
-
-  /** (Opcional) Fusionar carrito de invitado con el del usuario – si luego manejas cookie/guestId */
-  async mergeGuestIntoUser(_params: { userId: string; guestCartId?: string | null }) {
-    // Placeholder: tu modelo actual no usa cookie/guestId,
-    // así que aquí no hay nada que fusionar.
-    // Cuando implementes cookie cart_id, lo armamos.
-    const cart = await this.getOrCreateCart({ userId: _params.userId, allowCreate: true });
-    return this.buildCartView(cart);
-  }
-
-  /** Si tu entidad Cart tiene columnas de totales, se actualizan aquí */
-  private recalcCartTotals(cart: Cart) {
+  async clearCart(userId: string): Promise<void> {
+    const cart = await this.cartRepo.findOne({ where: { userId } });
     if (!cart) return;
-    const items = (cart.items ?? []).map((i) => {
-      const price = Number((i.product as any)?.price) || 0;
-      return price * i.quantity;
-    });
-    const subtotal = items.reduce((s, v) => s + v, 0);
-    if ('subtotal' in cart) (cart as any).subtotal = subtotal.toFixed(2);
-    if ('total' in cart) (cart as any).total = subtotal.toFixed(2);
+    await this.itemRepo.delete({ cartId: cart.id });
+    cart.updatedAt = new Date();
+    await this.cartRepo.save(cart);
+  }
+
+  /**
+   * Revalida stock y precios; si hay inconsistencias, lanza 409 con el Cart actualizado.
+   * Si todo OK, devuelve OrderDraft (payload para que tu compañero cree la preferencia de Mercado Pago).
+   * Aquí NO se descuenta stock ni se crean órdenes definitivas.
+   */
+  async prepareCheckout(userId: string) {
+    const cart = await this.loadCartWithItems(userId);
+    if (!cart.id || (cart.items ?? []).length === 0) {
+      throw new ConflictException({ code: 'CART_EMPTY' });
+    }
+    const view = await this.mapToView(cart);
+    if (view.summary.invalidItemsCount > 0) {
+      throw new ConflictException({ code: 'CART_NEEDS_REFRESH', cart: view });
+    }
+    // Devolvemos el payload que usa OrdersService (si decides delegar).
+    return {
+      orderId: null,
+      status: 'pending',
+      currency: view.summary.currency,
+      items: view.items.map((i) => ({
+        productId: i.productId,
+        name: i.name,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice ?? i.unitPriceCurrent, // alias numérico
+      })),
+      subtotal: view.summary.subtotal,
+      tax: view.summary.tax,
+      total: view.summary.total,
+    };
   }
 }
