@@ -48,7 +48,7 @@ export class WebhookController {
       const status = 'approved'; // reemplazar por el real
       const externalReference = data?.external_reference || 'ORDER_ID_AQUI';
 
-      await this.payments.updateOrderFromPayment(
+      await this.payments.updateCartFromPayment(
         mpPaymentId,
         status,
         externalReference,

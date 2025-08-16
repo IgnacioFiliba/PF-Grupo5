@@ -156,8 +156,7 @@ export class CartService {
 
     if (!item) {
       const qty = Math.min(qtyReq, stock);
-      if (qty <= 0)
-        throw new ConflictException({ code: 'CART_OUT_OF_STOCK' });
+      if (qty <= 0) throw new ConflictException({ code: 'CART_OUT_OF_STOCK' });
       item = this.itemRepo.create({
         cartId: cart.id,
         productId: dto.productId,

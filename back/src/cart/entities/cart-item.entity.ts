@@ -32,6 +32,9 @@ export class CartItem {
   @JoinColumn({ name: 'product_id' })
   product: Products;
 
+  @Column('uuid', { name: 'product_id' })
+  productId: string;
+
   @Column('int')
   quantity: number;
 
