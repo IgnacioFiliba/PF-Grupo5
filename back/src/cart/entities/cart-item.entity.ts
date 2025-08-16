@@ -1,7 +1,13 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Index
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  Index,
 } from 'typeorm';
 import { Cart } from './cart.entity';
+import { Products } from 'src/products/entities/product.entity';
 
 @Entity({ name: 'CART_ITEMS' })
 @Index(['cartId'])
@@ -11,7 +17,10 @@ export class CartItem {
   id: string;
 
   // ✅ Aseguramos que la relación jamás sea nula en ORM
-  @ManyToOne(() => Cart, (c) => c.items, { onDelete: 'CASCADE', nullable: false })
+  @ManyToOne(() => Cart, (c) => c.items, {
+    onDelete: 'CASCADE',
+    nullable: false,
+  })
   @JoinColumn({ name: 'cart_id' })
   cart: Cart;
 
@@ -19,8 +28,9 @@ export class CartItem {
   @Column('uuid', { name: 'cart_id' })
   cartId: string;
 
-  @Column('uuid', { name: 'product_id' })
-  productId: string;
+  @ManyToOne(() => Products, { eager: true, nullable: false })
+  @JoinColumn({ name: 'product_id' })
+  product: Products;
 
   @Column('int')
   quantity: number;

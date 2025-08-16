@@ -1,5 +1,9 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, OneToMany, Index
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  Index,
 } from 'typeorm';
 import { CartItem } from './cart-item.entity';
 
@@ -17,4 +21,10 @@ export class Cart {
 
   @Column({ type: 'timestamptz', default: () => 'now()' })
   updatedAt: Date;
+
+  @Column({ name: 'mp_preference_id', nullable: true })
+  mpPreferenceId?: string;
+
+  @Column({ name: 'mp_payment_id', nullable: true })
+  mpPaymentId?: string;
 }

@@ -5,27 +5,25 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Orders } from 'src/orders/entities/order.entity';
-import { OrderDetails } from 'src/orders/entities/order-detail.entity';
+
 import { Products } from 'src/products/entities/product.entity';
+import { Cart } from 'src/cart/entities/cart.entity';
 import { MercadoPagoClient } from './mercadopago.client';
 
 @Injectable()
 export class PaymentsService {
   constructor(
     private readonly mp: MercadoPagoClient,
-    @InjectRepository(Orders) private ordersRepo: Repository<Orders>,
-    @InjectRepository(OrderDetails) private detailsRepo: Repository<OrderDetails>,
+    @InjectRepository(Cart) private cartRepo: Repository<Cart>,
     @InjectRepository(Products) private productsRepo: Repository<Products>,
   ) {}
 
-  async createCheckoutPreference(orderId: string) {
+  /**
+   * Crear preferencia de pago desde un carrito
+   */
+  async createCheckoutPreference(cartId: string) {
     try {
       // Validaciones básicas de entorno
-      console.log('Token MP:', process.env.MP_ACCESS_TOKEN);
-      console.log('APP_BASE_URL:', process.env.APP_BASE_URL);
-
-
       if (!process.env.MP_ACCESS_TOKEN) {
         throw new BadRequestException('MP_ACCESS_TOKEN no configurado');
       }
@@ -33,41 +31,40 @@ export class PaymentsService {
         throw new BadRequestException('APP_BASE_URL no configurado');
       }
 
-      // Traer la orden con sus relaciones
-      const order = await this.ordersRepo.findOne({
-        where: { id: orderId },
-        relations: { user: true, orderDetails: { products: true } },
+      // Traer el carrito con sus items y productos
+      const cart = await this.cartRepo.findOne({
+        where: { id: cartId },
+        relations: ['items', 'items.product'],
       });
-      if (!order) throw new NotFoundException('Order not found');
+      if (!cart) throw new NotFoundException('Cart not found');
 
-      const products = order.orderDetails?.products ?? [];
-      if (!products.length) {
-        throw new BadRequestException('Order has no products');
+      if (!cart.items?.length) {
+        throw new BadRequestException('Cart has no items');
       }
 
-      // Idempotencia: ya hay preferencia creada → devolver init_point real consultando a MP
-      if (order.mpPreferenceId) {
-        const { initPoint } = await this.getInitPoint(order.mpPreferenceId);
+      // Idempotencia: si ya hay preferencia, devolverla
+      if (cart.mpPreferenceId) {
+        const { initPoint } = await this.getInitPoint(cart.mpPreferenceId);
         return {
           init_point: initPoint,
-          preference_id: order.mpPreferenceId,
+          preference_id: cart.mpPreferenceId,
         };
       }
 
       // Armar items de la preferencia
-      const items = products.map((p) => ({
-        id: p.id,
-        title: p.name,
-        description: p.description ?? undefined,
-        quantity: 1, // adapta si manejás quantity
-        unit_price: Number(p.price),
-        currency_id: 'ARS', // ajusta según tu caso
-        picture_url: p.imgUrl ?? undefined,
+      const items = cart.items.map((ci) => ({
+        id: ci.product.id,
+        title: ci.product.name,
+        description: ci.product.description ?? undefined,
+        quantity: ci.quantity,
+        unit_price: Number(ci.product.price),
+        currency_id: 'ARS', // o USD si corresponde
+        picture_url: ci.product.imgUrl ?? undefined,
       }));
 
       const preferenceBody = {
         items,
-        external_reference: order.id, // para mapear luego en el webhook
+        external_reference: cart.id, // ahora pasamos el cartId
         notification_url: `${process.env.APP_BASE_URL}/payments/webhook`,
         back_urls: {
           success: `${process.env.APP_BASE_URL}/payments/success`,
@@ -80,29 +77,26 @@ export class PaymentsService {
       // SDK v2: se envía { body: ... }
       const pref = await this.mp.preferenceApi.create({ body: preferenceBody });
 
-      // Soporte robusto a distintas formas de respuesta (algunas guías usan .body.*)
-      const prefId = (pref as any)?.id ?? (pref as any)?.body?.id ?? undefined;
+      const prefId = (pref as any)?.id ?? (pref as any)?.body?.id;
       const initPoint =
         (pref as any)?.init_point ??
         (pref as any)?.body?.init_point ??
-        undefined;
+        (pref as any)?.sandbox_init_point ??
+        (pref as any)?.body?.sandbox_init_point;
 
       if (!prefId || !initPoint) {
-        // Log para debug local si llega a pasar
-
         console.error('Respuesta inesperada de MP Preference.create:', pref);
         throw new BadRequestException(
           'No se pudo obtener la preferencia de pago (id/init_point)',
         );
       }
 
-      order.mpPreferenceId = prefId;
-      await this.ordersRepo.save(order);
+      cart.mpPreferenceId = prefId;
+      await this.cartRepo.save(cart);
 
       return { init_point: initPoint, preference_id: prefId };
     } catch (err: any) {
       console.error('Error en createCheckoutPreference:', err);
-      // Si el SDK trae detalle en err.message o err.cause, exponelo de forma legible
       const message =
         err?.message ||
         err?.cause?.message ||
@@ -112,8 +106,7 @@ export class PaymentsService {
   }
 
   /**
-   * Intenta leer el init_point real de una preferencia existente.
-   * Usa SDK v2: preference.get({ preferenceId })
+   * Recupera el init_point real de una preferencia existente
    */
   private async getInitPoint(
     preferenceId: string,
@@ -121,7 +114,6 @@ export class PaymentsService {
     try {
       const resp = await this.mp.preferenceApi.get({ preferenceId });
 
-      // Manejo robusto: resp.init_point o resp.body.init_point
       const initPoint =
         (resp as any)?.init_point ??
         (resp as any)?.body?.init_point ??
@@ -142,24 +134,29 @@ export class PaymentsService {
     }
   }
 
-  async updateOrderFromPayment(
+  /**
+   * Actualizar carrito con datos de pago (se llama desde webhook)
+   */
+  async updateCartFromPayment(
     mpPaymentId: string,
     status: string,
-    externalReference: string,
+    externalReference: string, // ahora es cartId
   ) {
     try {
-      const order = await this.ordersRepo.findOne({
+      const cart = await this.cartRepo.findOne({
         where: { id: externalReference },
       });
-      if (!order) return;
+      if (!cart) return;
 
-      order.mpPaymentId = mpPaymentId;
-      // Estados posibles MP: approved | rejected | pending | in_process | cancelled | refunded | charged_back
-      order.status = status as any;
-      await this.ordersRepo.save(order);
+      cart.mpPaymentId = mpPaymentId;
+      await this.cartRepo.save(cart);
+
+      // 👇 Aquí podrías crear la Order a partir del carrito si el pago está approved
+      if (status === 'approved') {
+        // lógica de crear Order con cart.items
+      }
     } catch (err) {
-      console.error('Error en updateOrderFromPayment:', err);
-      // No re-lanzamos para no romper el webhook
+      console.error('Error en updateCartFromPayment:', err);
     }
   }
 }
