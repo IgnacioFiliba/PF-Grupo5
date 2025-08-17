@@ -8,28 +8,37 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+@ApiTags('payments')
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly payments: PaymentsService) {}
-  @ApiTags('payments')
+
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
-  @Post('checkout/:orderId')
-  @ApiOperation({ summary: 'Crear preferencia de pago de Mercado Pago' })
+  @Post('checkout/:cartId')
+  @ApiOperation({
+    summary: 'Crear preferencia de pago de Mercado Pago a partir del Cart',
+  })
   @ApiParam({
-    name: 'orderId',
+    name: 'cartId',
     example: '77bd2cdb-9955-4849-abbd-33f064905946',
   })
-  async checkout(@Param('orderId') orderId: string) {
-    return this.payments.createCheckoutPreference(orderId);
+  async checkout(@Param('cartId') cartId: string) {
+    return this.payments.createCheckoutPreference(cartId);
   }
-  @Post('success') success() {
+
+  @Post('success')
+  success() {
     return { ok: true, message: 'Pago aprobado' };
   }
-  @Post('failure') failure() {
+
+  @Post('failure')
+  failure() {
     return { ok: false, message: 'Pago rechazado' };
   }
-  @Post('pending') pending() {
+
+  @Post('pending')
+  pending() {
     return { ok: true, message: 'Pago pendiente' };
   }
 }
