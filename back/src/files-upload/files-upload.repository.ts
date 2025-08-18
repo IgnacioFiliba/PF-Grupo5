@@ -8,7 +8,10 @@ export class FilesUploadRepository {
       const uploadStream = cloudinary.uploader.upload_stream(
         { folder: 'products' },
         (error, result) => {
-          if (error) return reject(error);
+          if (error) {
+            console.error('Cloudinary error:', error);
+            return reject(error);
+          }
           resolve(result as UploadApiResponse);
         },
       );
@@ -16,3 +19,4 @@ export class FilesUploadRepository {
     });
   }
 }
+

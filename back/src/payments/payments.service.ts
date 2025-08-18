@@ -8,6 +8,9 @@ import { Repository } from 'typeorm';
 
 import { Products } from 'src/products/entities/product.entity';
 import { Cart } from 'src/cart/entities/cart.entity';
+import { Orders } from 'src/orders/entities/order.entity';
+import { OrderDetails } from 'src/orders/entities/order-detail.entity';
+import { Users } from 'src/users/entities/user.entity';
 import { MercadoPagoClient } from './mercadopago.client';
 
 @Injectable()
@@ -16,14 +19,14 @@ export class PaymentsService {
     private readonly mp: MercadoPagoClient,
     @InjectRepository(Cart) private cartRepo: Repository<Cart>,
     @InjectRepository(Products) private productsRepo: Repository<Products>,
+    @InjectRepository(Orders) private ordersRepo: Repository<Orders>,
+    @InjectRepository(OrderDetails)
+    private orderDetailsRepo: Repository<OrderDetails>,
+    @InjectRepository(Users) private usersRepo: Repository<Users>,
   ) {}
 
-  /**
-   * Crear preferencia de pago desde un carrito
-   */
   async createCheckoutPreference(cartId: string) {
     try {
-      // Validaciones básicas de entorno
       if (!process.env.MP_ACCESS_TOKEN) {
         throw new BadRequestException('MP_ACCESS_TOKEN no configurado');
       }
@@ -31,10 +34,9 @@ export class PaymentsService {
         throw new BadRequestException('APP_BASE_URL no configurado');
       }
 
-      // Traer el carrito con sus items y productos
       const cart = await this.cartRepo.findOne({
         where: { id: cartId },
-        relations: ['items', 'items.product'],
+        relations: ['items', 'items.product', 'user'],
       });
       if (!cart) throw new NotFoundException('Cart not found');
 
@@ -42,29 +44,19 @@ export class PaymentsService {
         throw new BadRequestException('Cart has no items');
       }
 
-      // Idempotencia: si ya hay preferencia, devolverla
-      if (cart.mpPreferenceId) {
-        const { initPoint } = await this.getInitPoint(cart.mpPreferenceId);
-        return {
-          init_point: initPoint,
-          preference_id: cart.mpPreferenceId,
-        };
-      }
-
-      // Armar items de la preferencia
       const items = cart.items.map((ci) => ({
         id: ci.product.id,
         title: ci.product.name,
         description: ci.product.description ?? undefined,
         quantity: ci.quantity,
-        unit_price: Number(ci.product.price),
-        currency_id: 'ARS', // o USD si corresponde
+        unit_price: Number(ci.unitPriceSnapshot),
+        currency_id: 'ARS',
         picture_url: ci.product.imgUrl ?? undefined,
       }));
 
       const preferenceBody = {
         items,
-        external_reference: cart.id, // ahora pasamos el cartId
+        external_reference: cart.id,
         notification_url: `${process.env.APP_BASE_URL}/payments/webhook`,
         back_urls: {
           success: `${process.env.APP_BASE_URL}/payments/success`,
@@ -72,9 +64,11 @@ export class PaymentsService {
           pending: `${process.env.APP_BASE_URL}/payments/pending`,
         },
         auto_return: 'approved',
+        payer: {
+          email: cart.user?.email ?? 'test_user_123456@testuser.com',
+        },
       };
 
-      // SDK v2: se envía { body: ... }
       const pref = await this.mp.preferenceApi.create({ body: preferenceBody });
 
       const prefId = (pref as any)?.id ?? (pref as any)?.body?.id;
@@ -92,6 +86,8 @@ export class PaymentsService {
       }
 
       cart.mpPreferenceId = prefId;
+      cart.status = 'pending';
+      cart.updatedAt = new Date();
       await this.cartRepo.save(cart);
 
       return { init_point: initPoint, preference_id: prefId };
@@ -105,56 +101,62 @@ export class PaymentsService {
     }
   }
 
-  /**
-   * Recupera el init_point real de una preferencia existente
-   */
-  private async getInitPoint(
-    preferenceId: string,
-  ): Promise<{ initPoint: string }> {
-    try {
-      const resp = await this.mp.preferenceApi.get({ preferenceId });
-
-      const initPoint =
-        (resp as any)?.init_point ??
-        (resp as any)?.body?.init_point ??
-        (resp as any)?.sandbox_init_point ??
-        (resp as any)?.body?.sandbox_init_point;
-
-      if (!initPoint) {
-        console.error('Respuesta inesperada de MP Preference.get:', resp);
-        throw new BadRequestException('No se pudo recuperar init_point');
-      }
-
-      return { initPoint };
-    } catch (err: any) {
-      console.error('Error en getInitPoint:', err);
-      throw new BadRequestException(
-        'No se pudo recuperar la preferencia existente',
-      );
-    }
-  }
-
-  /**
-   * Actualizar carrito con datos de pago (se llama desde webhook)
-   */
   async updateCartFromPayment(
     mpPaymentId: string,
     status: string,
-    externalReference: string, // ahora es cartId
+    externalReference: string, // cartId
   ) {
     try {
       const cart = await this.cartRepo.findOne({
         where: { id: externalReference },
+        relations: ['items', 'items.product', 'user'],
       });
       if (!cart) return;
 
-      cart.mpPaymentId = mpPaymentId;
-      await this.cartRepo.save(cart);
+      //if (status === 'failure') {
+      //  await this.cartRepo.remove(cart);
+      //  console.log(`🗑️ Carrito ${cart.id} eliminado por pago rechazado`);
+      //  return;
+      //}
 
-      // 👇 Aquí podrías crear la Order a partir del carrito si el pago está approved
-      if (status === 'approved') {
-        // lógica de crear Order con cart.items
+      // ✅ Si está aprobado → crear Order y OrderDetails
+      if (status === 'approved' || process.env.FORCE_SUCCESS === 'true') {
+        const order = this.ordersRepo.create({
+          date: new Date(),
+          status: 'onPreparation', // default
+          paymentStatus: 'approved', // desde MP
+          mpPreferenceId: cart.mpPreferenceId,
+          mpPaymentId,
+          user: cart.user,
+        });
+        await this.ordersRepo.save(order);
+
+        const total = cart.items.reduce(
+          (acc, item) => acc + Number(item.unitPriceSnapshot) * item.quantity,
+          0,
+        );
+
+        const orderDetails = this.orderDetailsRepo.create({
+          price: total,
+          order,
+          products: cart.items.map((i) => i.product),
+        });
+        await this.orderDetailsRepo.save(orderDetails);
+
+        // Eliminamos carrito ya procesado
+        await this.cartRepo.remove(cart);
+
+        console.log(
+          `✅ Order ${order.id} creada a partir del carrito ${cart.id}`,
+        );
+        return order;
       }
+
+      // 🔄 Si está pendiente, actualizamos carrito
+      cart.mpPaymentId = mpPaymentId;
+      cart.status = 'pending';
+      cart.updatedAt = new Date();
+      await this.cartRepo.save(cart);
     } catch (err) {
       console.error('Error en updateCartFromPayment:', err);
     }

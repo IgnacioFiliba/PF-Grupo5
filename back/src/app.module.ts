@@ -17,6 +17,7 @@ import { SupplierModule } from './supplier/supplier.module';
 import { StockEntryModule } from './stock-entry/stock-entry.module';
 import { CartModule } from './cart/cart.module'; // <-- ruta corregida
 import { PaymentsModule } from './payments/payments.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { PaymentsModule } from './payments/payments.module';
     SupplierModule,
     StockEntryModule,
     PaymentsModule,
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true, load: [typeorm] }),
 
     TypeOrmModule.forRootAsync({

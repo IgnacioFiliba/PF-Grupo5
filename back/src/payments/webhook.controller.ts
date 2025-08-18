@@ -1,6 +1,8 @@
-import { Controller, Headers, Post, Query, Req, Res } from '@nestjs/common';
-import { Response, Request } from 'express';
-import * as crypto from 'crypto';
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
+import { Controller, Post, Query, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { PaymentsService } from './payments.service';
 
 @Controller('payments')
@@ -8,55 +10,108 @@ export class WebhookController {
   constructor(private readonly payments: PaymentsService) {}
 
   @Post('webhook')
-  async handleWebhook(
-    @Query() query: any,
-    @Headers('x-signature') signature: string,
-    @Headers('x-request-id') requestId: string,
-    @Req() req: Request,
-    @Res() res: Response,
-  ) {
+  async handleWebhook(@Query() query: any, @Res() res: Response) {
     try {
-      // MP envía ?id o ?data.id (dependiendo del tipo de evento)
-      const id = (query['data.id'] || query['id'] || '').toString();
-      if (!id) return res.sendStatus(400);
+      const topic = (query['type'] || query['topic'] || '').toString(); // "payment" o "merchant_order"
+      const dataId = (query['data.id'] || query['id'] || '').toString(); // id del payment o del merchant_order
 
-      // Validar firma
-      if (!signature || !requestId) return res.sendStatus(401);
-      const [pTs, pV1] = signature.split(',');
-      const ts = (pTs?.split('=')[1] || '').trim();
-      const v1 = (pV1?.split('=')[1] || '').trim();
+      if (!dataId) return res.sendStatus(400);
 
-      const manifest = `id:${id};request-id:${requestId};ts:${ts};`;
-      const hash = crypto
-        .createHmac('sha256', process.env.MP_WEBHOOK_SECRET!)
-        .update(manifest)
-        .digest('hex');
+      // Helper para pedir un pago por id
+      const getPayment = async (paymentId: string) => {
+        const r = await fetch(
+          `https://api.mercadopago.com/v1/payments/${paymentId}`,
+          {
+            headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
+          },
+        );
+        if (!r.ok)
+          throw new Error(`MP payments get ${paymentId} -> ${r.status}`);
+        return r.json() as Promise<any>;
+      };
 
-      if (hash !== v1) return res.sendStatus(401); // firma inválida
+      // Helper para pedir una merchant order por id
+      const getMerchantOrder = async (merchantOrderId: string) => {
+        const r = await fetch(
+          `https://api.mercadopago.com/merchant_orders/${merchantOrderId}`,
+          {
+            headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
+          },
+        );
+        if (!r.ok)
+          throw new Error(
+            `MP merchant_orders get ${merchantOrderId} -> ${r.status}`,
+          );
+        return r.json() as Promise<any>;
+      };
 
-      // OK: Consultá el pago a MP si necesitás más datos (o usá el topic/status del body si lo envían)
-      // Aquí simplificamos: asumimos que el body incluye "type" y "data" con id de pago
-      // Recomendado: llamar a Payments API para traer status + external_reference
-      // Para Checkout Pro, podés consultar /v1/payments/:id o usar el SDK correspondiente.
+      // Caso 1: viene como payment directo
+      if (topic === 'payment' || query['data.id']) {
+        const payment = await getPayment(dataId);
+        const status = payment?.status;
+        const externalReference = payment?.external_reference; // acá guardaste el cartId
 
-      // ... pseudo: const payment = await this.consultarPago(id)
-      // Ejemplo mínimo: obtén external_reference y status del body si viene
-      const { type, data } = (req.body as any) ?? {};
-      const mpPaymentId = id;
-      // external_reference lo seteaste al crear la preferencia = order.id
-      // Si no viene en el body, consultá la API de pagos para obtenerlo (recomendado).
-      const status = 'approved'; // reemplazar por el real
-      const externalReference = data?.external_reference || 'ORDER_ID_AQUI';
+        if (!externalReference) {
+          // Si no viene, igual confirmamos 200 para que MP no reintente infinito
+          console.error('Payment sin external_reference', {
+            id: dataId,
+            payment,
+          });
+          return res.sendStatus(200);
+        }
 
-      await this.payments.updateCartFromPayment(
-        mpPaymentId,
-        status,
-        externalReference,
-      );
+        await this.payments.updateCartFromPayment(
+          dataId,
+          status,
+          externalReference,
+        );
 
+        return res.sendStatus(200);
+      }
+
+      // Caso 2: viene como merchant_order
+      if (topic === 'merchant_order' || query['topic'] === 'merchant_order') {
+        const mo = await getMerchantOrder(dataId);
+        const payments: Array<{ id: string | number; status: string }> =
+          mo?.payments || mo?.body?.payments || [];
+
+        if (!payments.length) {
+          // A veces llega la MO antes de que el pago exista; respondé 200 y MP reintentará
+          return res.sendStatus(200);
+        }
+
+        // Elegimos el último pago (o el primero aprobado)
+        const approved = payments.find((p) => p.status === 'approved');
+        const chosen = approved ?? payments[payments.length - 1];
+        const paymentId = String(chosen.id);
+
+        const payment = await getPayment(paymentId);
+        const status = payment?.status;
+        const externalReference = payment?.external_reference;
+
+        if (externalReference) {
+          await this.payments.updateCartFromPayment(
+            paymentId,
+            status === 'approved' ? 'success' : 'failure',
+            externalReference,
+          );
+        } else {
+          console.error('MO->Payment sin external_reference', {
+            dataId,
+            paymentId,
+            payment,
+          });
+        }
+
+        return res.sendStatus(200);
+      }
+
+      // Si vino algo raro pero con id, devolvemos 200 para evitar reintentos infinitos
       return res.sendStatus(200);
     } catch (e) {
-      return res.sendStatus(500);
+      console.error('Error en webhook:', e);
+      // Igual responder 200 limita reintentos si el error es de nuestro lado; durante dev podés dejar 500
+      return res.sendStatus(200);
     }
   }
 }

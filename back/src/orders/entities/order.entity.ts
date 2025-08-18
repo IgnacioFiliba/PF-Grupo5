@@ -17,8 +17,11 @@ export class Orders {
   @Column()
   date: Date;
 
-  @Column({ default: 'approved' })
+  @Column({ default: 'En Preparacion' })
   status: string;
+
+  @Column({ default: 'approved' })
+  paymentStatus: string;
 
   @Column({ name: 'mp_preference_id', nullable: true })
   mpPreferenceId?: string;

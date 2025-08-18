@@ -53,7 +53,8 @@ export class FilesUploadService {
     let uploadResponse: UploadApiResponse;
     try {
       uploadResponse = await this.filesUploadRepository.uploadImage(file);
-    } catch {
+    } catch (error) {
+      console.error('Upload service error:', error); // 👈
       throw new InternalServerErrorException('Error uploading image');
     }
 

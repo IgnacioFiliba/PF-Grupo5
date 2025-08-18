@@ -7,9 +7,21 @@ import { PaymentsController } from './payments.controller';
 import { WebhookController } from './webhook.controller';
 import { Cart } from 'src/cart/entities/cart.entity';
 import { CartItem } from 'src/cart/entities/cart-item.entity';
+import { Orders } from 'src/orders/entities/order.entity';
+import { OrderDetails } from 'src/orders/entities/order-detail.entity';
+import { Users } from 'src/users/entities/user.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Cart, CartItem, Products])],
+  imports: [
+    TypeOrmModule.forFeature([
+      Cart,
+      CartItem,
+      Products,
+      Orders,
+      OrderDetails,
+      Users,
+    ]),
+  ],
   providers: [MercadoPagoClient, PaymentsService],
   controllers: [PaymentsController, WebhookController],
   exports: [PaymentsService],
