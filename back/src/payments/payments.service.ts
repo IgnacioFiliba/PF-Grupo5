@@ -59,10 +59,11 @@ export class PaymentsService {
         external_reference: cart.id,
         notification_url: `${process.env.APP_BASE_URL}/payments/webhook`,
         back_urls: {
-          success: `${process.env.APP_BASE_URL}/payments/success`,
-          failure: `${process.env.APP_BASE_URL}/payments/failure`,
-          pending: `${process.env.APP_BASE_URL}/payments/pending`,
+          success: `${process.env.APP_BASE_URL_FRONT}/home`,
+          failure: `${process.env.APP_BASE_URL_FRONT}/home`,
+          pending: `${process.env.APP_BASE_URL_FRONT}/home`,
         },
+
         auto_return: 'approved',
         payer: {
           email: cart.user?.email ?? 'test_user_123456@testuser.com',

@@ -1,4 +1,11 @@
-import { Controller, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  NotFoundException,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { AuthGuard } from 'src/auth/auth.guard';
 import {
@@ -7,11 +14,18 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Orders } from 'src/orders/entities/order.entity';
 
 @ApiTags('payments')
 @Controller('payments')
 export class PaymentsController {
-  constructor(private readonly payments: PaymentsService) {}
+  constructor(
+    private readonly payments: PaymentsService,
+    @InjectRepository(Orders)
+    private readonly ordersRepository: Repository<Orders>,
+  ) {}
 
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
@@ -40,5 +54,29 @@ export class PaymentsController {
   @Post('pending')
   pending() {
     return { ok: true, message: 'Pago pendiente' };
+  }
+
+  @Post('confirm')
+  async confirmPayment(
+    @Body() body: { status: string; paymentId: string; preferenceId: string },
+  ) {
+    const { status, paymentId, preferenceId } = body;
+
+    // Buscar la orden por el preferenceId
+    const order = await this.ordersRepository.findOne({
+      where: { mpPreferenceId: preferenceId },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Orden no encontrada');
+    }
+
+    // Actualizar datos de pago
+    order.paymentStatus = status;
+    order.mpPaymentId = paymentId;
+
+    await this.ordersRepository.save(order);
+
+    return { ok: true, order };
   }
 }
