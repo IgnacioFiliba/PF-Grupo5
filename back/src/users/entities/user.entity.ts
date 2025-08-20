@@ -28,11 +28,17 @@ export class Users {
   @Column({ type: 'varchar', length: 50, nullable: true })
   city: string;
 
+  @Column({ nullable: true })
+  imgUrl: string;
+
   @Column({ type: 'boolean', default: false })
   isAdmin: boolean;
 
   @Column({ type: 'boolean', default: false })
   isSuperAdmin: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  isBanned: boolean;
 
   @OneToMany(() => Orders, (order) => order.user)
   orders: Orders[];

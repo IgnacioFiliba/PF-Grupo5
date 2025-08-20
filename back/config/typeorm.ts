@@ -12,12 +12,10 @@ const config = {
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 
-  // Nunca sincronizar con datos reales; usa migraciones
   dropSchema: false,
   synchronize: true,
   logging: true,
 
-  // En dev usamos TS directo; en prod/dist usamos los JS compilados
   entities: ['dist/**/*.entity{.ts,.js}'],
   migrations: ['dist/migrations/**/*{.ts,.js}'],
 };

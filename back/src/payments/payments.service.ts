@@ -12,6 +12,7 @@ import { Orders } from 'src/orders/entities/order.entity';
 import { OrderDetails } from 'src/orders/entities/order-detail.entity';
 import { Users } from 'src/users/entities/user.entity';
 import { MercadoPagoClient } from './mercadopago.client';
+import { OrderItem } from 'src/orders/entities/order-item.entity';
 
 @Injectable()
 export class PaymentsService {
@@ -22,6 +23,8 @@ export class PaymentsService {
     @InjectRepository(Orders) private ordersRepo: Repository<Orders>,
     @InjectRepository(OrderDetails)
     private orderDetailsRepo: Repository<OrderDetails>,
+    @InjectRepository(OrderItem)
+    private readonly orderItemRepo: Repository<OrderItem>,
     @InjectRepository(Users) private usersRepo: Repository<Users>,
   ) {}
 
@@ -114,37 +117,45 @@ export class PaymentsService {
       });
       if (!cart) return;
 
-      //if (status === 'failure') {
-      //  await this.cartRepo.remove(cart);
-      //  console.log(`🗑️ Carrito ${cart.id} eliminado por pago rechazado`);
-      //  return;
-      //}
+      if (status === 'failure') {
+        await this.cartRepo.remove(cart);
+        console.log(`🗑️ Carrito ${cart.id} eliminado por pago rechazado`);
+        return;
+      }
 
-      // ✅ Si está aprobado → crear Order y OrderDetails
       if (status === 'approved' || process.env.FORCE_SUCCESS === 'true') {
+        // Creamos la Order
         const order = this.ordersRepo.create({
           date: new Date(),
-          status: 'onPreparation', // default
-          paymentStatus: 'approved', // desde MP
+          status: 'onPreparation',
+          paymentStatus: 'approved',
           mpPreferenceId: cart.mpPreferenceId,
           mpPaymentId,
           user: cart.user,
         });
         await this.ordersRepo.save(order);
 
+        // Calcular total
         const total = cart.items.reduce(
           (acc, item) => acc + Number(item.unitPriceSnapshot) * item.quantity,
           0,
         );
 
+        // Crear OrderDetails con OrderItems
         const orderDetails = this.orderDetailsRepo.create({
           price: total,
           order,
-          products: cart.items.map((i) => i.product),
+          items: cart.items.map((i) =>
+            this.orderItemRepo.create({
+              product: i.product,
+              quantity: i.quantity,
+              unitPrice: i.unitPriceSnapshot,
+            }),
+          ),
         });
         await this.orderDetailsRepo.save(orderDetails);
 
-        // Eliminamos carrito ya procesado
+        // Borrar carrito ya procesado
         await this.cartRepo.remove(cart);
 
         console.log(
@@ -153,7 +164,7 @@ export class PaymentsService {
         return order;
       }
 
-      // 🔄 Si está pendiente, actualizamos carrito
+      // Estado pendiente → solo actualizamos carrito
       cart.mpPaymentId = mpPaymentId;
       cart.status = 'pending';
       cart.updatedAt = new Date();

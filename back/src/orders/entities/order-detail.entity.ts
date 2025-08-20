@@ -1,34 +1,27 @@
+// src/orders/entities/order-detail.entity.ts
 import {
   Entity,
-  Column,
-  JoinColumn,
-  OneToOne,
-  JoinTable,
-  ManyToMany,
   PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
 } from 'typeorm';
 import { Orders } from './order.entity';
-import { Products } from 'src/products/entities/product.entity';
+import { OrderItem } from './order-item.entity';
 
 @Entity({ name: 'ORDER_DETAILS' })
 export class OrderDetails {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({
-    type: 'decimal',
-    precision: 10,
-    scale: 2,
-  })
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   price: number;
 
-  @OneToOne(() => Orders, (order) => order.orderDetails)
-  @JoinColumn({ name: 'order_id' })
+  @ManyToOne(() => Orders, (order) => order.orderDetails, {
+    onDelete: 'CASCADE',
+  })
   order: Orders;
 
-  @ManyToMany(() => Products, (product) => product.orderDetails)
-  @JoinTable({
-    name: 'ORDER_DETAILS_PRODUCTS',
-  })
-  products: Products[];
+  @OneToMany(() => OrderItem, (item) => item.orderDetails, { cascade: true })
+  items: OrderItem[];
 }

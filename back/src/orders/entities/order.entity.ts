@@ -29,7 +29,9 @@ export class Orders {
   @Column({ name: 'mp_payment_id', nullable: true })
   mpPaymentId?: string;
 
-  @OneToOne(() => OrderDetails, (orderDetails) => orderDetails.order)
+  @OneToOne(() => OrderDetails, (orderDetails) => orderDetails.order, {
+    cascade: true,
+  })
   orderDetails: OrderDetails;
 
   @ManyToOne(() => Users, (user) => user.orders)

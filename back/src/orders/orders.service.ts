@@ -67,7 +67,7 @@ export class OrdersService {
     const orderDetails = this.orderDetailsRepository.create({
       order: newOrder,
       price: Number(total.toFixed(2)),
-      products: productsArray,
+      items: productsArray,
     });
 
     const savedDetails = await this.orderDetailsRepository.save(orderDetails);
@@ -90,7 +90,7 @@ export class OrdersService {
       relations: {
         user: true,
         orderDetails: {
-          products: true,
+          items: true,
         },
       },
     });
@@ -107,13 +107,15 @@ export class OrdersService {
       orderDetails: {
         id: order.orderDetails.id,
         price: Number(order.orderDetails.price).toFixed(2),
-        products: (order.orderDetails.products ?? []).map((p) => ({
-          id: p.id,
-          name: p.name,
-          description: p.description,
-          price: Number(p.price).toFixed(2),
-          stock: p.stock,
-          imgUrl: p.imgUrl,
+        products: (order.orderDetails.items ?? []).map((item) => ({
+          id: item.product.id,
+          name: item.product.name,
+          description: item.product.description,
+          price: Number(item.product.price).toFixed(2),
+          stock: item.product.stock,
+          imgUrl: item.product.imgUrl,
+          quantity: item.quantity,
+          unitPrice: Number(item.unitPrice).toFixed(2),
         })),
       },
     };

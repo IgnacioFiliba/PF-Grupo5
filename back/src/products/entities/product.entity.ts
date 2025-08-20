@@ -6,7 +6,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Category } from 'src/categories/entities/category.entity';
-import { OrderDetails } from 'src/orders/entities/order-detail.entity';
+import { OrderItem } from 'src/orders/entities/order-item.entity';
 
 @Entity('PRODUCTS')
 export class Products {
@@ -43,6 +43,7 @@ export class Products {
   @Column({ nullable: true, type: 'text' })
   description?: string;
 
-  @OneToMany(() => OrderDetails, (detail) => detail.products)
-  orderDetails: OrderDetails[];
+  // 🔹 Ahora se relaciona con OrderItem en vez de OrderDetails directamente
+  @OneToMany(() => OrderItem, (item) => item.product)
+  orderItems: OrderItem[];
 }
