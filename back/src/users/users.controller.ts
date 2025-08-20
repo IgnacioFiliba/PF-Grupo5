@@ -75,15 +75,14 @@ export class UsersController {
           name: 'Ignacio Modificado',
           email: 'nuevo@example.com',
           city: 'Rosario',
-          isAdmin: true,        // <- cambiar a admin
-          // isSuperAdmin: false // <- opcional
+          isAdmin: true,
         },
       },
     },
   })
   @Put(':id')
-  @Roles(Role.ADMIN)                 
-  @UseGuards(AuthGuard, RolesGuard) 
+  @Roles(Role.ADMIN)
+  @UseGuards(AuthGuard, RolesGuard)
   update(@Param('id', ParseUUIDPipe) id: string, @Body() user: UpdateUserDto) {
     return this.usersService.update(id, user);
   }

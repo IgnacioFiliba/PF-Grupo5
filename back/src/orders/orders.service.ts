@@ -120,4 +120,130 @@ export class OrdersService {
       },
     };
   }
+
+  async findAll(user: any) {
+    if (!user.isAdmin) {
+      throw new ForbiddenException('Only admins can view all orders');
+    }
+
+    const orders = await this.ordersRepository.find({
+      relations: {
+        user: true,
+        orderDetails: { items: { product: true } },
+      },
+    });
+
+    return orders.map((order) => ({
+      id: order.id,
+      date: order.date,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      user: {
+        id: order.user.id,
+        name: order.user.name,
+        email: order.user.email,
+      },
+      orderDetails: {
+        id: order.orderDetails.id,
+        price: Number(order.orderDetails.price).toFixed(2),
+        products: (order.orderDetails.items ?? []).map((item) => ({
+          id: item.product.id,
+          name: item.product.name,
+          description: item.product.description,
+          price: Number(item.product.price).toFixed(2),
+          quantity: item.quantity,
+        })),
+      },
+    }));
+  }
+
+  async updateStatus(orderId: string, user: any) {
+    if (!user.isAdmin) {
+      throw new ForbiddenException('Only admins can update order status');
+    }
+
+    const order = await this.ordersRepository.findOneBy({ id: orderId });
+
+    if (!order) throw new NotFoundException('Order not found');
+
+    if (order.status !== 'En Preparacion') {
+      throw new BadRequestException(
+        `Order status must be 'En Preparacion' to approve. Current: ${order.status}`,
+      );
+    }
+
+    order.status = 'Aprobada';
+    await this.ordersRepository.save(order);
+
+    return { message: `Order ${order.id} approved successfully` };
+  }
+
+  async getDashboard() {
+    const orders = await this.ordersRepository.find({
+      relations: {
+        orderDetails: { items: { product: true } },
+      },
+    });
+
+    const productSales = new Map<
+      string,
+      {
+        productId: string;
+        productName: string;
+        totalQuantity: number;
+        totalRevenue: number;
+        salesByDate: { date: string; quantity: number }[];
+      }
+    >();
+
+    for (const order of orders) {
+      const orderDate = order.date.toISOString().split('T')[0];
+
+      for (const item of order.orderDetails.items) {
+        const key = item.product.id;
+        if (!productSales.has(key)) {
+          productSales.set(key, {
+            productId: item.product.id,
+            productName: item.product.name,
+            totalQuantity: 0,
+            totalRevenue: 0,
+            salesByDate: [],
+          });
+        }
+
+        const salesData = productSales.get(key)!;
+        salesData.totalQuantity += item.quantity;
+        salesData.totalRevenue += Number(item.unitPrice) * item.quantity;
+
+        const existingDate = salesData.salesByDate.find(
+          (s) => s.date === orderDate,
+        );
+        if (existingDate) {
+          existingDate.quantity += item.quantity;
+        } else {
+          salesData.salesByDate.push({
+            date: orderDate,
+            quantity: item.quantity,
+          });
+        }
+      }
+    }
+
+    const summary = {
+      totalOrders: orders.length,
+      totalRevenue: Array.from(productSales.values()).reduce(
+        (acc, p) => acc + p.totalRevenue,
+        0,
+      ),
+      totalProductsSold: Array.from(productSales.values()).reduce(
+        (acc, p) => acc + p.totalQuantity,
+        0,
+      ),
+    };
+
+    return {
+      sales: Array.from(productSales.values()),
+      summary,
+    };
+  }
 }

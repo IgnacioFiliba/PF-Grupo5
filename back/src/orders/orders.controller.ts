@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   Controller,
   Post,
@@ -6,12 +7,22 @@ import {
   Body,
   UseGuards,
   Req,
+  Patch,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
-import { ApiBearerAuth, ApiParam, ApiOperation } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiParam,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { Request } from 'express';
+import { RolesGuard } from 'src/auth/roles.guard';
+import { Roles } from 'src/interceptors/roles.decorator';
+import { Role } from 'src/auth/roles.enum';
+import { DashboardResponseDto } from './dto/dashboard-response.dto';
 
 @Controller('orders')
 export class OrdersController {
@@ -37,5 +48,36 @@ export class OrdersController {
   findOne(@Param('id') id: string, @Req() req: Request) {
     const userId = req.user.id;
     return this.orderService.findOne(id, userId);
+  }
+
+  @ApiBearerAuth()
+  @Get()
+  @Roles(Role.ADMIN)
+  @UseGuards(AuthGuard, RolesGuard)
+  @ApiOperation({ summary: 'Obtener todas las órdenes (solo admin)' })
+  findAll(@Req() req: Request) {
+    return this.orderService.findAll(req.user);
+  }
+
+  @ApiBearerAuth()
+  @Patch(':id/status')
+  @Roles(Role.ADMIN)
+  @UseGuards(AuthGuard, RolesGuard)
+  @ApiOperation({
+    summary:
+      'Cambiar el status de una orden de "En Preparacion" a "Aprobada" (solo admin)',
+  })
+  updateStatus(@Param('id') id: string, @Req() req: Request) {
+    return this.orderService.updateStatus(id, req.user);
+  }
+
+  @ApiBearerAuth()
+  @Roles(Role.ADMIN)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Get('dashboard')
+  @ApiOperation({ summary: 'Obtener estadísticas de ventas' })
+  @ApiResponse({ status: 200, type: DashboardResponseDto })
+  getDashboard() {
+    return this.orderService.getDashboard();
   }
 }
