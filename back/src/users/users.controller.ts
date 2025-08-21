@@ -99,4 +99,31 @@ export class UsersController {
   delete(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.delete(id);
   }
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Banear/desbanear usuario (solo Admin)' })
+  @ApiParam({
+    name: 'id',
+    description: 'ID del usuario a banear/desbanear',
+    example: '171de8b7-a721-4e3b-91e5-9d86960d1f97',
+  })
+  @Put(':id/toggle-ban')
+  @Roles(Role.ADMIN)
+  @UseGuards(AuthGuard, RolesGuard)
+  toggleBan(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.toggleBan(id);
+  }
+
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Dar/Quitar permisos de Admin (solo Admin)' })
+  @ApiParam({
+    name: 'id',
+    description: 'ID del usuario a modificar permisos',
+    example: '171de8b7-a721-4e3b-91e5-9d86960d1f97',
+  })
+  @Put(':id/toggle-admin')
+  @Roles(Role.ADMIN)
+  @UseGuards(AuthGuard, RolesGuard)
+  toggleAdmin(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.toggleAdmin(id);
+  }
 }

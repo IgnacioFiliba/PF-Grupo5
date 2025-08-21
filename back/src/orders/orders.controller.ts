@@ -37,6 +37,16 @@ export class OrdersController {
   }
 
   @ApiBearerAuth()
+  @Roles(Role.ADMIN)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Get('dashboard')
+  @ApiOperation({ summary: 'Obtener estadísticas de ventas' })
+  @ApiResponse({ status: 200, type: DashboardResponseDto })
+  getDashboard() {
+    return this.orderService.getDashboard();
+  }
+
+  @ApiBearerAuth()
   @Get(':id')
   @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'Obtener una orden de compra por su ID' })
@@ -69,15 +79,5 @@ export class OrdersController {
   })
   updateStatus(@Param('id') id: string, @Req() req: Request) {
     return this.orderService.updateStatus(id, req.user);
-  }
-
-  @ApiBearerAuth()
-  @Roles(Role.ADMIN)
-  @UseGuards(AuthGuard, RolesGuard)
-  @Get('dashboard')
-  @ApiOperation({ summary: 'Obtener estadísticas de ventas' })
-  @ApiResponse({ status: 200, type: DashboardResponseDto })
-  getDashboard() {
-    return this.orderService.getDashboard();
   }
 }

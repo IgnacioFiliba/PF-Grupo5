@@ -47,15 +47,15 @@ export class UsersService {
   }
 
   async update(id: string, dto: UpdateUserDto) {
-  if (!id) throw new BadRequestException('ID is required');
+    if (!id) throw new BadRequestException('ID is required');
 
-  const user = await this.usersRepository.findOne({ where: { id } });
-  if (!user) throw new NotFoundException('User not found');
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
 
-  Object.assign(user, dto);
+    Object.assign(user, dto);
 
-  return this.usersRepository.save(user);
-}
+    return this.usersRepository.save(user);
+  }
 
   async delete(id: string) {
     if (!id) throw new BadRequestException('ID is required');
@@ -66,5 +66,35 @@ export class UsersService {
     }
 
     return { message: 'User deleted successfully' };
+  }
+
+  async toggleBan(id: string) {
+    if (!id) throw new BadRequestException('ID is required');
+
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+
+    user.isBanned = !user.isBanned;
+    await this.usersRepository.save(user);
+
+    return {
+      message: `User ${user.isBanned ? 'banned' : 'unbanned'} successfully`,
+      user,
+    };
+  }
+
+  async toggleAdmin(id: string) {
+    if (!id) throw new BadRequestException('ID is required');
+
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+
+    user.isAdmin = !user.isAdmin;
+    await this.usersRepository.save(user);
+
+    return {
+      message: `User isAdmin set to ${user.isAdmin}`,
+      user,
+    };
   }
 }

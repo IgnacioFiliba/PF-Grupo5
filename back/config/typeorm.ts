@@ -12,7 +12,7 @@ const config = {
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 
-  dropSchema: true,
+  dropSchema: false,
   synchronize: true,
   logging: true,
 

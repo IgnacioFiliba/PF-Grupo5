@@ -170,13 +170,13 @@ export class OrdersService {
     });
     if (!order) throw new NotFoundException('Order not found');
 
-    if (order.status !== 'En Preparacion') {
+    if (order.status !== 'onPreparation') {
       throw new BadRequestException(
         `Order status must be 'En Preparacion' to approve. Current: ${order.status}`,
       );
     }
 
-    order.status = 'Aprobada';
+    order.status = 'approved';
     await this.ordersRepository.save(order);
 
     await this.mailService.sendOrderApproved(order.user.email, order.id);

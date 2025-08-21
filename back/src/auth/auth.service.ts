@@ -45,6 +45,10 @@ export class AuthService {
 
     if (!findUser) throw new BadRequestException('Bad Credentials');
 
+    if (findUser.isBanned) {
+      throw new BadRequestException('User is banned');
+    }
+
     const matchingPasswords = await bcrypt.compare(
       credentials.password,
       findUser.password,
@@ -79,7 +83,11 @@ export class AuthService {
       where: { email: user.email },
     });
 
-    if (!finalUser) {
+    if (finalUser) {
+      if (finalUser.isBanned) {
+        throw new BadRequestException('User is banned');
+      }
+    } else {
       finalUser = this.usersRepository.create({
         name: user.name,
         email: user.email,
