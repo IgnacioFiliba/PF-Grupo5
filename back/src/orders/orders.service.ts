@@ -11,6 +11,7 @@ import { Orders } from './entities/order.entity';
 import { OrderDetails } from './entities/order-detail.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { Products } from 'src/products/entities/product.entity';
+import { MailService } from 'src/mail/mail.service';
 
 @Injectable()
 export class OrdersService {
@@ -23,6 +24,7 @@ export class OrdersService {
     private orderDetailsRepository: Repository<OrderDetails>,
     @InjectRepository(Products)
     private productsRepository: Repository<Products>,
+    private readonly mailService: MailService, //
   ) {}
 
   async create(createOrderDto: CreateOrderDto) {
@@ -162,8 +164,10 @@ export class OrdersService {
       throw new ForbiddenException('Only admins can update order status');
     }
 
-    const order = await this.ordersRepository.findOneBy({ id: orderId });
-
+    const order = await this.ordersRepository.findOne({
+      where: { id: orderId },
+      relations: { user: true }, // 👈 importante para traer el mail del user
+    });
     if (!order) throw new NotFoundException('Order not found');
 
     if (order.status !== 'En Preparacion') {
@@ -174,6 +178,8 @@ export class OrdersService {
 
     order.status = 'Aprobada';
     await this.ordersRepository.save(order);
+
+    await this.mailService.sendOrderApproved(order.user.email, order.id);
 
     return { message: `Order ${order.id} approved successfully` };
   }

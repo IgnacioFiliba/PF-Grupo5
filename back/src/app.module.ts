@@ -18,10 +18,12 @@ import { StockEntryModule } from './stock-entry/stock-entry.module';
 import { CartModule } from './cart/cart.module'; // <-- ruta corregida
 import { PaymentsModule } from './payments/payments.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
     OrdersModule,
+    MailModule,
     UsersModule,
     ProductsModule,
     AuthModule,
