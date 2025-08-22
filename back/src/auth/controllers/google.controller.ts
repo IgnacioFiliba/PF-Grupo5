@@ -2,10 +2,14 @@ import { Controller, Get, Req, UseGuards, Res } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from '../auth.service';
 import { Request, Response } from 'express';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('auth/google')
 export class GoogleAuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Get()
   @UseGuards(AuthGuard('google'))
@@ -17,7 +21,9 @@ export class GoogleAuthController {
     const user = req.user;
     const loginData = await this.authService.googleLogin(user);
     const encodedData = encodeURIComponent(JSON.stringify(loginData));
-    return res.redirect(`http://localhost:3000/home?data=${encodedData}`);
-    //prueba de carga a develop
+
+    const frontendUrl = process.env.FRONTEND_URL;
+
+    return res.redirect(`${frontendUrl}/home?data=${encodedData}`);
   }
 }

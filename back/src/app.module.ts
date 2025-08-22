@@ -15,7 +15,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { SupplierModule } from './supplier/supplier.module';
 import { StockEntryModule } from './stock-entry/stock-entry.module';
-import { CartModule } from './cart/cart.module'; // <-- ruta corregida
+import { CartModule } from './cart/cart.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MailModule } from './mail/mail.module';
@@ -40,7 +40,7 @@ import { MailModule } from './mail/mail.module';
       useFactory: (config: ConfigService) => config.get('typeorm')!,
     }),
 
-    CartModule, // <-- va aquí, fuera de TypeOrmModule.forRootAsync
+    CartModule,
 
     FilesUploadModule,
 
