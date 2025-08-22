@@ -87,11 +87,17 @@ export class AuthService {
       if (finalUser.isBanned) {
         throw new BadRequestException('User is banned');
       }
+
+      if (!finalUser.imgUrl && user.imgUrl) {
+        finalUser.imgUrl = user.imgUrl;
+        await this.usersRepository.save(finalUser);
+      }
     } else {
       finalUser = this.usersRepository.create({
         name: user.name,
         email: user.email,
         password: '',
+        imgUrl: user.imgUrl,
       });
       await this.usersRepository.save(finalUser);
     }
@@ -109,6 +115,7 @@ export class AuthService {
         id: finalUser.id,
         name: finalUser.name,
         email: finalUser.email,
+        imgUrl: finalUser.imgUrl,
         isAdmin: finalUser.isAdmin,
         isSuperAdmin: finalUser.isSuperAdmin,
       },
