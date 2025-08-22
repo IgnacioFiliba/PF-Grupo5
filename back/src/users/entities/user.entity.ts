@@ -1,4 +1,5 @@
 import { Cart } from 'src/cart/entities/cart.entity';
+import { Favorite } from 'src/favorite/entity/favorite.entity';
 import { Orders } from 'src/orders/entities/order.entity';
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 
@@ -45,4 +46,7 @@ export class Users {
 
   @OneToMany(() => Cart, (cart) => cart.user)
   carts: Cart[];
+
+  @OneToMany(() => Favorite, (fav) => fav.user, { cascade: true })
+  favorites: Favorite[];
 }

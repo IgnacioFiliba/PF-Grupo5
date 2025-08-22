@@ -19,6 +19,7 @@ import { CartModule } from './cart/cart.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MailModule } from './mail/mail.module';
+import { FavoritesModule } from './favorite/favorite.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { MailModule } from './mail/mail.module';
     SupplierModule,
     StockEntryModule,
     PaymentsModule,
+    FavoritesModule,
     ScheduleModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true, load: [typeorm] }),
 
