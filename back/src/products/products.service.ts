@@ -8,8 +8,6 @@ import { FilesUploadRepository } from 'src/files-upload/files-upload.repository'
 import { SearchProductDto } from './dto/search-product.dto';
 import { FindProductsQuery } from './dto/find-products.query'; // <-- NUEVO
 import data from '../seeds/products.json';
-import { FilesUploadService } from 'src/files-upload/files-upload.service';
-
 
 @Injectable()
 export class ProductsService {

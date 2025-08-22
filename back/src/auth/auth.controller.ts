@@ -7,12 +7,23 @@ import {
   Req,
   UseGuards,
   HttpCode,
+  UploadedFile,
+  MaxFileSizeValidator,
+  FileTypeValidator,
+  ParseFilePipe,
 } from '@nestjs/common';
 import { CreateUserDto, LoginDto } from 'src/users/dto/create-user.dto';
 import { AuthService } from './auth.service';
 import { ExcludePasswordInterceptor } from 'src/interceptors/exclude-password.interceptor';
-import { ApiTags, ApiBody, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBody,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiConsumes,
+} from '@nestjs/swagger';
 import { AuthGuard } from './auth.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Auth')
 @ApiBearerAuth()
@@ -28,24 +39,58 @@ export class AuthController {
   }
 
   @Post('/register')
-  @ApiOperation({ summary: 'Registrar un nuevo usuario' })
+  @ApiOperation({ summary: 'Registrar un nuevo usuario con imagen de perfil' })
+  @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: 'Datos para registrar un nuevo usuario',
     schema: {
-      example: {
-        name: 'Ignacio Muestra',
-        email: 'muestra@example.com',
-        password: 'Muestra123!',
-        confirmPassword: 'Muestra123!',
-        phone: 3512345678,
-        country: 'Argentina',
-        address: 'Calle Muestra 123',
-        city: 'Córdoba',
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Imagen del usuario (jpg, jpeg, png, webp)',
+        },
+        name: { type: 'string', example: 'Ignacio Muestra' },
+        email: { type: 'string', example: 'muestra@example.com' },
+        password: { type: 'string', example: 'Muestra123!' },
+        confirmPassword: { type: 'string', example: 'Muestra123!' },
+        phone: { type: 'string', example: '3512345678' },
+        country: { type: 'string', example: 'Argentina' },
+        address: { type: 'string', example: 'Calle Muestra 123' },
+        city: { type: 'string', example: 'Córdoba' },
       },
+      required: [
+        'name',
+        'email',
+        'password',
+        'confirmPassword',
+        'phone',
+        'country',
+        'address',
+        'city',
+      ],
     },
   })
-  register(@Body() user: CreateUserDto) {
-    return this.authService.register(user);
+  @UseInterceptors(FileInterceptor('file'))
+  register(
+    @Body() user: CreateUserDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({
+            maxSize: 300000,
+            message: 'El archivo es demasiado grande. Máximo 300KB.',
+          }),
+          new FileTypeValidator({
+            fileType: /^image\/(jpg|jpeg|png|webp)$/i,
+          }),
+        ],
+      }),
+    )
+    file?: Express.Multer.File,
+  ) {
+    return this.authService.register(user, file);
   }
 
   @Post('/signin')

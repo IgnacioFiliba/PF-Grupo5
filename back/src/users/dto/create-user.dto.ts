@@ -9,6 +9,7 @@ import {
   IsNumber,
   IsEmpty,
   Validate,
+  IsOptional,
 } from 'class-validator';
 import { MatchPassword } from 'src/helpers/matchPassword';
 
@@ -88,6 +89,10 @@ export class CreateUserDto {
   @MinLength(5)
   @MaxLength(20)
   city: string;
+
+  @IsOptional()
+  @IsString()
+  imgUrl?: string;
 
   /**
    * @description Admin flag. Should not be set manually.

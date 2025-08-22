@@ -1,41 +1,57 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateUserDto, LoginDto } from 'src/users/dto/create-user.dto';
 import { Users } from 'src/users/entities/user.entity';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
+import { FilesUploadRepository } from 'src/files-upload/files-upload.repository';
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(Users)
     private readonly usersRepository: Repository<Users>,
     private readonly jwtService: JwtService,
+    private readonly fileUploadRepository: FilesUploadRepository,
   ) {}
 
-  async register(user: CreateUserDto): Promise<Users> {
+  async register(
+    user: CreateUserDto,
+    file?: Express.Multer.File,
+  ): Promise<Users> {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { confirmPassword, ...userWithoutPassword } = user;
 
     const findUser = await this.usersRepository.findOne({
-      where: {
-        email: user.email,
-      },
+      where: { email: user.email },
     });
-
-    if (findUser) {
-      throw new BadRequestException('User already registered');
-    }
+    if (findUser) throw new BadRequestException('User already registered');
 
     const hashedPassword = await bcrypt.hash(user.password, 10);
+
+    let imgUrl = '';
+    if (file) {
+      try {
+        const uploadResponse =
+          await this.fileUploadRepository.uploadImage(file);
+        imgUrl = uploadResponse.secure_url;
+      } catch (error) {
+        console.error('Error al subir imagen de usuario:', error);
+        throw new InternalServerErrorException('Error uploading user image');
+      }
+    }
 
     const createUser = this.usersRepository.create({
       ...userWithoutPassword,
       password: hashedPassword,
+      imgUrl,
     });
-    const newUser = await this.usersRepository.save(createUser);
 
-    return newUser;
+    return await this.usersRepository.save(createUser);
   }
 
   async signIn(credentials: LoginDto) {
