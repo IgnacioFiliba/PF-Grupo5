@@ -15,15 +15,30 @@ export class UsersService {
     private readonly usersRepository: Repository<Users>,
   ) {}
 
-  async findAll(page = 1, limit = 3) {
+  async findAll(page = 1, limit = 3, search?: string) {
     if (page < 1 || limit < 1) {
       throw new BadRequestException('Page and limit must be positive numbers');
     }
 
-    const [users, total] = await this.usersRepository.findAndCount({
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const query = this.usersRepository.createQueryBuilder('user');
+
+    if (search) {
+      if (/^[0-9a-fA-F-]{36}$/.test(search)) {
+        query.where('user.id = :id', { id: search });
+      } else {
+        query.where(
+          'LOWER(user.name) LIKE :search OR LOWER(user.email) LIKE :search',
+          {
+            search: `%${search.toLowerCase()}%`,
+          },
+        );
+      }
+    }
+
+    const [users, total] = await query
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
 
     return {
       total,

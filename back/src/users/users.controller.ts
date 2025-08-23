@@ -33,17 +33,30 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Obtener todos los usuarios (solo Admin)' })
+  @ApiOperation({
+    summary:
+      'Obtener todos los usuarios o buscar por ID/Nombre/Email (solo Admin)',
+  })
   @ApiQuery({ name: 'page', required: false, example: '1' })
   @ApiQuery({ name: 'limit', required: false, example: '10' })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    example: 'juan / juan@mail.com / uuid',
+  })
   @Get()
   @Roles(Role.ADMIN)
   @UseGuards(AuthGuard, RolesGuard)
-  findAll(@Query('page') page: string, @Query('limit') limit: string) {
-    if (limit && page) {
-      return this.usersService.findAll(+page, +limit);
-    }
-    return this.usersService.findAll();
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.usersService.findAll(
+      page ? +page : 1,
+      limit ? +limit : 3,
+      search,
+    );
   }
 
   @ApiBearerAuth()

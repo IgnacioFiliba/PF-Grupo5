@@ -39,11 +39,9 @@ export class OrdersService {
       throw new NotFoundException('User not found');
     }
 
-    // Crear orden base
     const order = this.ordersRepository.create({ user, date: new Date() });
     const newOrder = await this.ordersRepository.save(order);
 
-    // Calcular total y actualizar stock
     let total = 0;
 
     const productsArray: Products[] = await Promise.all(
@@ -58,7 +56,6 @@ export class OrdersService {
           );
         }
 
-        // TODO: si manejan quantity en DTO, usarla aquí
         total += Number(product.price);
         product.stock -= 1;
         await this.productsRepository.save(product);
@@ -123,12 +120,15 @@ export class OrdersService {
     };
   }
 
-  async findAll(user: any) {
+  async findAll(user: any, orderId?: string) {
     if (!user.isAdmin) {
       throw new ForbiddenException('Only admins can view all orders');
     }
 
+    const where = orderId ? { id: orderId } : {};
+
     const orders = await this.ordersRepository.find({
+      where,
       relations: {
         user: true,
         orderDetails: { items: { product: true } },
@@ -166,11 +166,16 @@ export class OrdersService {
 
     const order = await this.ordersRepository.findOne({
       where: { id: orderId },
-      relations: { user: true }, // 👈 importante para traer el mail del user
+      relations: {
+        user: true,
+        orderDetails: { items: { product: true } },
+      },
     });
+
     if (!order) throw new NotFoundException('Order not found');
 
-    if (order.status !== 'onPreparation') {
+    const normalized = (order.status || '').toLowerCase().replace(/\s+/g, '');
+    if (normalized !== 'enpreparacion' && normalized !== 'onpreparation') {
       throw new BadRequestException(
         `Order status must be 'En Preparacion' to approve. Current: ${order.status}`,
       );
@@ -179,7 +184,8 @@ export class OrdersService {
     order.status = 'approved';
     await this.ordersRepository.save(order);
 
-    await this.mailService.sendOrderApproved(order.user.email, order.id);
+    // 👇 ahora pasamos la ORDEN COMPLETA
+    await this.mailService.sendOrderApproved(order);
 
     return { message: `Order ${order.id} approved successfully` };
   }

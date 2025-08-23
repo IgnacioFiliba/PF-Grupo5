@@ -8,6 +8,7 @@ import {
   UseGuards,
   Req,
   Patch,
+  Query,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -64,9 +65,11 @@ export class OrdersController {
   @Get()
   @Roles(Role.ADMIN)
   @UseGuards(AuthGuard, RolesGuard)
-  @ApiOperation({ summary: 'Obtener todas las órdenes (solo admin)' })
-  findAll(@Req() req: Request) {
-    return this.orderService.findAll(req.user);
+  @ApiOperation({
+    summary: 'Obtener todas las órdenes o buscar por ID (solo admin)',
+  })
+  findAll(@Req() req: Request, @Query('orderId') orderId?: string) {
+    return this.orderService.findAll(req.user, orderId);
   }
 
   @ApiBearerAuth()
