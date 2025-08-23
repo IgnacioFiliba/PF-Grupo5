@@ -32,7 +32,6 @@ export class MailService {
     }).format(n);
   }
 
-  // ✅ Genera el PDF con nombre del cliente + items + total
   private async generateInvoicePdf(order: Orders): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ margin: 50 });
@@ -42,67 +41,117 @@ export class MailService {
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', (err) => reject(err));
 
-      // Encabezado
-      doc.fontSize(20).text('Factura - RepuStore 🚗🔧', { align: 'center' });
-      doc.moveDown();
+      const red = '#D32F2F';
+      const black = '#000000';
+      const gray = '#F2F2F2';
 
-      // Datos del cliente / orden
+      // ✅ Encabezado con fondo rojo
+      doc.rect(0, 0, doc.page.width, 60).fill(red);
+      doc
+        .fillColor('white')
+        .fontSize(22)
+        .font('Helvetica-Bold')
+        .text('Factura - RepuStore', 50, 20, { align: 'left' });
+      doc.moveDown(2);
+
+      // ✅ Datos del cliente (recuadro gris)
       const customerName = order.user?.name || 'Cliente';
       const customerEmail = order.user?.email || '';
       const orderDate = (order.date && new Date(order.date)) || new Date();
 
       doc
-        .fontSize(12)
-        .text(`Orden ID: ${order.id}`)
-        .text(`Cliente: ${customerName}`)
-        .text(`Email: ${customerEmail}`)
-        .text(`Fecha: ${orderDate.toLocaleString('es-AR')}`);
-      doc.moveDown();
+        .fillColor(black)
+        .fontSize(11)
+        .rect(50, 80, 500, 70)
+        .fillAndStroke(gray, black);
 
-      // Encabezados de la "tabla"
+      doc
+        .fillColor(black)
+        .font('Helvetica')
+        .text(`Orden ID: ${order.id}`, 60, 90)
+        .text(`Cliente: ${customerName}`, 60, 105)
+        .text(`Email: ${customerEmail}`, 60, 120)
+        .text(`Fecha: ${orderDate.toLocaleString('es-AR')}`, 60, 135);
+
+      doc.moveDown(6);
+
+      // ✅ Cabecera tabla (fondo negro)
       const xDesc = 50,
-        xQty = 350,
-        xUnit = 410,
+        xQty = 330,
+        xUnit = 400,
         xSub = 500;
-      doc
-        .fontSize(12)
-        .text('Producto', xDesc)
-        .text('Cant.', xQty)
-        .text('Precio', xUnit)
-        .text('Subtotal', xSub);
-      doc
-        .moveTo(50, doc.y + 3)
-        .lineTo(560, doc.y + 3)
-        .stroke();
-      doc.moveDown(0.5);
 
-      // Items
+      const yTable = doc.y;
+      doc.rect(50, yTable, 510, 20).fill(black);
+      doc
+        .fillColor('white')
+        .font('Helvetica-Bold')
+        .fontSize(12)
+        .text('Producto', xDesc, yTable + 5)
+        .text('Cant.', xQty, yTable + 5)
+        .text('Precio', xUnit, yTable + 5)
+        .text('Subtotal', xSub, yTable + 5);
+
+      doc.moveDown(2);
+
+      // ✅ Items con filas alternadas
       const items = order.orderDetails?.items || [];
       let total = 0;
 
-      items.forEach((it) => {
+      items.forEach((it, i) => {
         const name = it.product?.name || 'Producto';
         const qty = it.quantity || 0;
         const unit = Number(it.unitPrice) || 0;
         const sub = unit * qty;
         total += sub;
 
+        const y = doc.y;
+
+        // fondo gris alternado
+        if (i % 2 === 0) {
+          doc.rect(50, y - 2, 510, 20).fill(gray);
+          doc.fillColor(black);
+        } else {
+          doc.fillColor(black);
+        }
+
         doc
-          .text(name, xDesc, doc.y)
-          .text(`${qty}`, xQty)
-          .text(this.money(unit), xUnit)
-          .text(this.money(sub), xSub);
+          .font('Helvetica')
+          .fontSize(11)
+          .text(name, xDesc, y)
+          .text(`${qty}`, xQty, y)
+          .text(this.money(unit), xUnit, y)
+          .text(this.money(sub), xSub, y);
+
+        doc.moveDown(1.5);
       });
 
-      doc.moveDown();
-      doc.moveTo(50, doc.y).lineTo(560, doc.y).stroke();
-      doc.moveDown();
+      // ✅ Total resaltado (fondo rojo)
+      doc.moveDown(1);
+      const boxX = 350;
+      const boxY = doc.y + 10;
+      const boxWidth = 210;
+      const boxHeight = 25;
 
-      // Total
-      doc.fontSize(13).text(`TOTAL: ${this.money(total)}`, { align: 'right' });
+      doc.rect(boxX, boxY, boxWidth, boxHeight).fill(red);
 
-      doc.moveDown();
-      doc.fontSize(11).text('¡Gracias por tu compra!', { align: 'center' });
+      // Texto TOTAL centrado
+      doc
+        .fillColor('white')
+        .font('Helvetica-Bold')
+        .fontSize(13)
+        .text(`TOTAL: ${this.money(total)}`, boxX, boxY + 7, {
+          width: boxWidth,
+          align: 'center',
+        });
+
+      // ✅ Footer
+      doc.moveDown(5);
+      doc
+        .fillColor('gray')
+        .font('Helvetica-Oblique')
+        .fontSize(11)
+        .text('¡Gracias por tu compra! - RepuStore', { align: 'center' });
 
       doc.end();
     });
