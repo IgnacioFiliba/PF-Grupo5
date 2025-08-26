@@ -111,7 +111,9 @@ export class ProductsController {
   }
 
   // 🔹 Nuevo GET que unifica search + filtros
-  @ApiOperation({ summary: 'Obtener productos con búsqueda y filtros' })
+  @ApiOperation({
+    summary: 'Obtener productos con búsqueda y filtros (incluye comentarios)',
+  })
   @ApiQuery({
     name: 'search',
     required: false,
@@ -132,10 +134,10 @@ export class ProductsController {
   @Get()
   async getProducts(@Query() query: FindProductsQuery) {
     const { items } = await this.productsService.findAllWithFilters(query);
-    return items; // devolvemos array para no romper front
+    return items;
   }
 
-  @ApiOperation({ summary: 'Obtener producto por ID' })
+  @ApiOperation({ summary: 'Obtener producto por ID (incluye comentarios)' })
   @ApiParam({
     name: 'id',
     description: 'UUID del producto',

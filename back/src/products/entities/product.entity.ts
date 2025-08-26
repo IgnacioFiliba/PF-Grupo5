@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 import { Category } from 'src/categories/entities/category.entity';
 import { OrderItem } from 'src/orders/entities/order-item.entity';
+import { Comment } from 'src/comments/entity/comments.entity';
 
 @Entity('PRODUCTS')
 export class Products {
@@ -37,13 +38,21 @@ export class Products {
   @Column({ length: 50 })
   engine: string;
 
+  @Column({ type: 'float', default: 0 })
+  averageRating: number;
+
+  @Column({ type: 'int', default: 0 })
+  totalReviews: number;
+
+  @OneToMany(() => Comment, (comment) => comment.product)
+  comments: Comment[];
+
   @ManyToOne(() => Category, (category) => category.products)
   category: Category;
 
   @Column({ nullable: true, type: 'text' })
   description?: string;
 
-  // 🔹 Ahora se relaciona con OrderItem en vez de OrderDetails directamente
   @OneToMany(() => OrderItem, (item) => item.product)
   orderItems: OrderItem[];
 }
