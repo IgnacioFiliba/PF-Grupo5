@@ -10,6 +10,8 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { FilesUploadRepository } from 'src/files-upload/files-upload.repository';
+import { randomUUID } from 'crypto';
+import { MailService } from 'src/mail/mail.service';
 @Injectable()
 export class AuthService {
   constructor(
@@ -17,6 +19,7 @@ export class AuthService {
     private readonly usersRepository: Repository<Users>,
     private readonly jwtService: JwtService,
     private readonly fileUploadRepository: FilesUploadRepository,
+    private readonly mailService: MailService,
   ) {}
 
   async register(
@@ -45,13 +48,21 @@ export class AuthService {
       }
     }
 
+    const verificationToken = randomUUID();
+
     const createUser = this.usersRepository.create({
       ...userWithoutPassword,
       password: hashedPassword,
       imgUrl,
+      isVerified: false,
+      verificationToken,
     });
 
-    return await this.usersRepository.save(createUser);
+    const savedUser = await this.usersRepository.save(createUser);
+
+    await this.mailService.sendVerificationEmail(savedUser);
+
+    return savedUser;
   }
 
   async signIn(credentials: LoginDto) {
@@ -63,6 +74,10 @@ export class AuthService {
 
     if (findUser.isBanned) {
       throw new BadRequestException('User is banned');
+    }
+
+    if (!findUser.isVerified) {
+      throw new BadRequestException('Account not verified, check your email');
     }
 
     const matchingPasswords = await bcrypt.compare(
@@ -136,5 +151,21 @@ export class AuthService {
         isSuperAdmin: finalUser.isSuperAdmin,
       },
     };
+  }
+
+  async verifyAccount(token: string) {
+    const user = await this.usersRepository.findOne({
+      where: { verificationToken: token },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Token inválido o expirado');
+    }
+
+    user.isVerified = true;
+    user.verificationToken = null;
+    await this.usersRepository.save(user);
+
+    return { message: '✅ Cuenta verificada con éxito' };
   }
 }

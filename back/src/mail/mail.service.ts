@@ -6,9 +6,11 @@ import { ConfigService } from '@nestjs/config';
 import PDFDocument from 'pdfkit';
 import { Buffer } from 'buffer';
 import { Orders } from 'src/orders/entities/order.entity';
+import { Users } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class MailService {
+  private backendUrl: string;
   private frontendUrl: string;
   private storeMail: string;
 
@@ -16,6 +18,8 @@ export class MailService {
     private readonly mailerService: MailerService,
     private readonly configService: ConfigService,
   ) {
+    this.backendUrl =
+      this.configService.get<string>('BACKEND_URL') || 'http://localhost:3001';
     this.frontendUrl =
       this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
     this.storeMail =
@@ -207,6 +211,48 @@ export class MailService {
           contentType: 'application/pdf',
         },
       ],
+    });
+  }
+
+  async sendVerificationEmail(user: Users) {
+    const verifyUrl = `${this.backendUrl}/auth/verify/${user.verificationToken}`;
+
+    await this.mailerService.sendMail({
+      to: user.email,
+      subject: '🔐 Verifica tu cuenta - RepuStore',
+      html: `
+    <div style="font-family: Arial, sans-serif; background-color: #ffffff; padding: 20px; border-radius: 8px; max-width: 600px; margin: auto; border: 1px solid #ddd; color: #000000;">
+
+      <!-- Encabezado -->
+      <div style="background-color: #D32F2F; padding: 15px; text-align: center; color: #ffffff; border-radius: 6px 6px 0 0;">
+        <h1 style="margin: 0; font-size: 22px;">RepuStore 🚗🔧</h1>
+      </div>
+
+      <!-- Cuerpo -->
+      <div style="padding: 20px; text-align: center;">
+        <h2 style="margin-bottom: 10px; color: #D32F2F;">¡Verifica tu cuenta!</h2>
+        <p style="font-size: 16px; margin: 10px 0; color: #000;">
+          Hola <b>${user.name}</b>, gracias por registrarte en <b style="color: #D32F2F;">RepuStore</b>.
+        </p>
+        <p style="font-size: 15px; margin: 10px 0; color: #000;">
+          Para activar tu cuenta y comenzar a comprar, por favor haz clic en el siguiente botón:
+        </p>
+        <a href="${verifyUrl}" 
+          style="display:inline-block; margin-top:15px; padding:12px 25px; background:#000000; color:#ffffff; text-decoration:none; font-weight:bold; border-radius:5px;">
+          Verificar mi cuenta
+        </a>
+        <p style="font-size: 13px; margin-top: 20px; color: #555;">
+          Si no creaste esta cuenta, ignora este correo.
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="background-color: #D32F2F; color: #fff; padding: 10px; text-align: center; border-radius: 0 0 6px 6px; font-size: 13px;">
+        © 2025 RepuStore - Todos los derechos reservados
+      </div>
+
+    </div>
+    `,
     });
   }
 }

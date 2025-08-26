@@ -41,6 +41,12 @@ export class Users {
   @Column({ type: 'boolean', default: false })
   isBanned: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  isVerified: boolean;
+
+  @Column({ type: 'varchar', nullable: true })
+  verificationToken: string | null;
+
   @OneToMany(() => Orders, (order) => order.user)
   orders: Orders[];
 

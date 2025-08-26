@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -154,6 +155,23 @@ export class PaymentsService {
           ),
         });
         await this.orderDetailsRepo.save(orderDetails);
+
+        for (const item of cart.items) {
+          const product = await this.productsRepo.findOne({
+            where: { id: item.product.id },
+          });
+          if (product) {
+            if (product.stock < item.quantity) {
+              throw new ConflictException({
+                code: 'INSUFFICIENT_STOCK',
+                productId: product.id,
+                available: product.stock,
+              });
+            }
+            product.stock = product.stock - item.quantity;
+            await this.productsRepo.save(product);
+          }
+        }
 
         // Borrar carrito ya procesado
         await this.cartRepo.remove(cart);

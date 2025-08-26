@@ -11,6 +11,7 @@ import {
   MaxFileSizeValidator,
   FileTypeValidator,
   ParseFilePipe,
+  Param,
 } from '@nestjs/common';
 import { CreateUserDto, LoginDto } from 'src/users/dto/create-user.dto';
 import { AuthService } from './auth.service';
@@ -77,6 +78,7 @@ export class AuthController {
     @Body() user: CreateUserDto,
     @UploadedFile(
       new ParseFilePipe({
+        fileIsRequired: false,
         validators: [
           new MaxFileSizeValidator({
             maxSize: 300000,
@@ -112,5 +114,11 @@ export class AuthController {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   logout(@Req() _req: any) {
     return;
+  }
+
+  @Get('/verify/:token')
+  @ApiOperation({ summary: 'Verificar cuenta con token' })
+  async verifyAccount(@Param('token') token: string) {
+    return this.authService.verifyAccount(token);
   }
 }
