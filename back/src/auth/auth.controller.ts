@@ -5,6 +5,7 @@ import {
   Post,
   UseInterceptors,
   Req,
+  Res,
   UseGuards,
   HttpCode,
   UploadedFile,
@@ -25,6 +26,7 @@ import {
 } from '@nestjs/swagger';
 import { AuthGuard } from './auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Response } from 'express';
 
 @ApiTags('Auth')
 @ApiBearerAuth()
@@ -117,8 +119,15 @@ export class AuthController {
   }
 
   @Get('/verify/:token')
-  @ApiOperation({ summary: 'Verificar cuenta con token' })
-  async verifyAccount(@Param('token') token: string) {
-    return this.authService.verifyAccount(token);
+  async verifyAccount(@Param('token') token: string, @Res() res: Response) {
+    const verified = await this.authService.verifyAccount(token);
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+    if (verified) {
+      return res.redirect(`${frontendUrl}`);
+    } else {
+      return res.redirect(`${frontendUrl}/verified-failed`);
+    }
   }
 }
