@@ -12,6 +12,8 @@ import { OrderDetails } from './entities/order-detail.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { Products } from 'src/products/entities/product.entity';
 import { MailService } from 'src/mail/mail.service';
+import data from '../seeds/orders.json';
+import { OrderItem } from './entities/order-item.entity';
 
 @Injectable()
 export class OrdersService {
@@ -257,5 +259,69 @@ export class OrdersService {
       sales: Array.from(productSales.values()),
       summary,
     };
+  }
+
+  async seeder() {
+    const users = await this.usersRepository.find();
+    const products = await this.productsRepository.find();
+
+    const newOrders: Orders[] = [];
+
+    // 👇 aquí casteamos a array para evitar el TS2488
+    for (const element of data as any[]) {
+      const user = users.find((u) => u.id === element.userId);
+      if (!user)
+        throw new NotFoundException(`User ${element.userId} not found`);
+
+      const order = new Orders();
+      order.user = user;
+      order.date = new Date(element.date);
+      order.status = element.status ?? 'En Preparacion';
+      order.paymentStatus = element.paymentStatus ?? 'approved';
+
+      const orderDetails = new OrderDetails();
+      orderDetails.items = [];
+
+      let total = 0;
+
+      for (const d of element.items) {
+        const product = products.find((p) => p.id === d.productId);
+        const users = await this.usersRepository.find();
+        console.log(
+          'Usuarios en BD:',
+          users.map((u) => u.id),
+        );
+
+        for (const element of data as any[]) {
+          const user = users.find((u) => u.id === element.userId);
+          if (!user) {
+            throw new NotFoundException(
+              `User ${element.userId} not found. Usuarios disponibles: ${users.map((u) => u.id).join(', ')}`,
+            );
+          }
+        }
+        if (!product)
+          throw new NotFoundException(`Product ${d.productId} not found`);
+
+        const item = new OrderItem();
+        item.product = product;
+        item.quantity = d.quantity;
+        item.unitPrice = product.price;
+        item.orderDetails = orderDetails;
+
+        total += product.price * d.quantity;
+
+        orderDetails.items.push(item);
+      }
+
+      orderDetails.price = total;
+      orderDetails.order = order;
+
+      order.orderDetails = orderDetails;
+
+      newOrders.push(order);
+    }
+
+    await this.ordersRepository.save(newOrders);
   }
 }

@@ -69,9 +69,7 @@ export class PaymentsService {
         },
 
         auto_return: 'approved',
-        payer: {
-          email: cart.user?.email ?? 'test_user_123456@testuser.com',
-        },
+        payer: {},
       };
 
       const pref = await this.mp.preferenceApi.create({ body: preferenceBody });

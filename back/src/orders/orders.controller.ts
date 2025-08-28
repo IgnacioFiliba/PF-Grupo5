@@ -83,4 +83,14 @@ export class OrdersController {
   updateStatus(@Param('id') id: string, @Req() req: Request) {
     return this.orderService.updateStatus(id, req.user);
   }
+
+  @ApiBearerAuth()
+  @Post('seed')
+  @ApiOperation({
+    summary: 'Cargar órdenes de prueba desde orders.json',
+  })
+  async seedOrders() {
+    return this.orderService.seeder();
+  }
+
 }
