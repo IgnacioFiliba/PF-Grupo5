@@ -139,6 +139,7 @@ export class UsersService {
     if (!user) throw new NotFoundException('User not found');
 
     user.isAdmin = !user.isAdmin;
+    user.isSuperAdmin = user.isAdmin;
     await this.usersRepository.save(user);
 
     return {
