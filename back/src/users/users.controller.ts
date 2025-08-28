@@ -140,7 +140,6 @@ export class UsersController {
     return this.usersService.toggleAdmin(id);
   }
 
-  @Put('toggle-admin/:email')
   @ApiOperation({
     summary: 'Dar/Quitar permisos de Admin por email (sin protección)',
   })
@@ -149,6 +148,8 @@ export class UsersController {
     description: 'Email del usuario a modificar permisos',
     example: 'user@example.com',
   })
+  @Put('toggle-admin/:email')
+  @UseGuards() // 👈 esto quita cualquier guard heredado
   toggleAdminByEmail(@Param('email') email: string) {
     return this.usersService.toggleAdminByEmail(email);
   }
