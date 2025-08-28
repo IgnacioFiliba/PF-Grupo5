@@ -215,7 +215,7 @@ export class MailService {
   }
 
   async sendVerificationEmail(user: Users) {
-    const verifyUrl = `${this.backendUrl}/auth/verify/${user.verificationToken}`;
+    const verifyUrl = `${this.frontendUrl}/auth/verify/${user.verificationToken}`;
 
     await this.mailerService.sendMail({
       to: user.email,
