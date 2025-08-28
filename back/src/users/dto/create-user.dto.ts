@@ -6,7 +6,6 @@ import {
   MaxLength,
   MinLength,
   Matches,
-  IsNumber,
   IsEmpty,
   Validate,
   IsOptional,
@@ -67,8 +66,8 @@ export class CreateUserDto {
    * @example 3512345678
    */
   @IsNotEmpty()
-  @IsNumber()
-  phone: number;
+  @IsString()
+  phone: string;
 
   /**
    * @description Country of residence

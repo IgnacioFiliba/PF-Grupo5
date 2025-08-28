@@ -7,7 +7,7 @@ export interface User {
   name: string;
   password: string;
   address: string;
-  phone: number;
+  phone: string;
   country?: string;
   city?: string;
 }
@@ -21,7 +21,7 @@ export class UsersRepository {
       name: 'Juan Pérez',
       password: '1234',
       address: 'Calle Falsa 123',
-      phone: 123456789,
+      phone: '123456789',
       country: 'Argentina',
       city: 'Córdoba',
     },
@@ -31,7 +31,7 @@ export class UsersRepository {
       name: 'Ana García',
       password: '5678',
       address: 'Av. Siempreviva 742',
-      phone: 987654321,
+      phone: '987654321',
     },
   ];
 

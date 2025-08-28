@@ -19,7 +19,7 @@ export class Users {
   password: string;
 
   @Column({ type: 'bigint', nullable: true })
-  phone: number;
+  phone: string;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   country: string;
