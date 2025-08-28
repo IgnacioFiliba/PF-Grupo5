@@ -140,6 +140,7 @@ export class UsersService {
 
     user.isAdmin = !user.isAdmin;
     user.isSuperAdmin = user.isAdmin;
+    user.isVerified = user.isAdmin;
     await this.usersRepository.save(user);
 
     return {
