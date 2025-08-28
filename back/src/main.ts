@@ -16,9 +16,9 @@ async function bootstrap() {
       'http://localhost:3001',
       'https://pf-05.vercel.app',
     ],
-    credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: '*',
+    credentials: true,
   });
 
   app.useGlobalPipes(
