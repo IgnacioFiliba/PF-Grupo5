@@ -17,7 +17,7 @@ async function bootstrap() {
       'https://pf-05.vercel.app',
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: '*',
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   });
 
