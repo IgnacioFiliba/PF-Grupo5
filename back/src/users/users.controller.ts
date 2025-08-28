@@ -139,4 +139,17 @@ export class UsersController {
   toggleAdmin(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.toggleAdmin(id);
   }
+
+  @ApiOperation({
+    summary: 'Dar/Quitar permisos de Admin por email (sin protección)',
+  })
+  @ApiParam({
+    name: 'email',
+    description: 'Email del usuario a modificar permisos',
+    example: 'user@example.com',
+  })
+  @Put(':email/toggle-admin')
+  toggleAdminByEmail(@Param('email') email: string) {
+    return this.usersService.toggleAdminByEmail(email);
+  }
 }

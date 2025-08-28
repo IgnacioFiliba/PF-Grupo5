@@ -131,4 +131,19 @@ export class UsersService {
       user,
     };
   }
+
+  async toggleAdminByEmail(email: string) {
+    if (!email) throw new BadRequestException('Email is required');
+
+    const user = await this.usersRepository.findOne({ where: { email } });
+    if (!user) throw new NotFoundException('User not found');
+
+    user.isAdmin = !user.isAdmin;
+    await this.usersRepository.save(user);
+
+    return {
+      message: `User isAdmin set to ${user.isAdmin}`,
+      user,
+    };
+  }
 }
