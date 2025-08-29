@@ -42,7 +42,7 @@ export class Users {
   @Column({ type: 'boolean', default: false })
   isBanned: boolean;
 
-  @Column({ type: 'boolean', default: false })
+  @Column({ type: 'boolean', default: true })
   isVerified: boolean;
 
   @Column({ type: 'varchar', nullable: true })

@@ -54,7 +54,7 @@ export class AuthService {
       ...userWithoutPassword,
       password: hashedPassword,
       imgUrl,
-      isVerified: false,
+      isVerified: true,
       verificationToken,
     });
 
