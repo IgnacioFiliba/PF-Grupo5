@@ -90,12 +90,16 @@ export class AuthService {
     }
 
     const payload = {
-      id: findUser.id,
+      sub: findUser.id,
       email: findUser.email,
       isAdmin: findUser.isAdmin,
+      isSuperAdmin: findUser.isSuperAdmin,
     };
 
-    const token = this.jwtService.sign(payload);
+    const token = this.jwtService.sign(payload, {
+      secret: process.env.JWT_SECRET,
+      expiresIn: '30d',
+    });
 
     return {
       access_Token: token,
@@ -136,9 +140,14 @@ export class AuthService {
     const payload = {
       sub: finalUser.id,
       email: finalUser.email,
+      isAdmin: finalUser.isAdmin,
+      isSuperAdmin: finalUser.isSuperAdmin,
     };
 
-    const token = this.jwtService.sign(payload);
+    const token = this.jwtService.sign(payload, {
+      secret: process.env.JWT_SECRET,
+      expiresIn: '30d',
+    });
 
     return {
       access_Token: token,

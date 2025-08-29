@@ -28,21 +28,26 @@ export class AuthGuard implements CanActivate {
     const secret = process.env.JWT_SECRET;
 
     try {
+      // 🔑 Verificamos el token
       const payload = this.jwtService.verify(token, { secret });
 
+      // 🔥 Ahora el payload trae isAdmin e isSuperAdmin porque los agregaste en el sign
       const user = {
-        ...payload,
+        id: payload.sub,
+        email: payload.email,
+        isAdmin: payload.isAdmin,
+        isSuperAdmin: payload.isSuperAdmin,
+        roles: payload.isAdmin ? [Role.ADMIN] : [Role.USER],
         iat: new Date(payload.iat * 1000),
         exp: new Date(payload.exp * 1000),
-        roles: payload.isAdmin ? [Role.ADMIN] : [Role.USER],
       };
 
       request.user = user;
 
-      console.log('Usuario autenticado:', user);
+      console.log('✅ Usuario autenticado:', user);
       return true;
     } catch (error) {
-      console.error('Error al verificar token:', error);
+      console.error('❌ Error al verificar token:', error);
       return false;
     }
   }
