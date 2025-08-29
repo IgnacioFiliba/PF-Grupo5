@@ -44,7 +44,7 @@ export class Users {
 
   @Column({ type: 'boolean', default: true })
   isVerified: boolean;
-
+  //prueba
   @Column({ type: 'varchar', nullable: true })
   verificationToken: string | null;
 

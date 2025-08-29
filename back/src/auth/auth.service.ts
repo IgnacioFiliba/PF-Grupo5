@@ -54,10 +54,10 @@ export class AuthService {
       ...userWithoutPassword,
       password: hashedPassword,
       imgUrl,
-      isVerified: true,
+      isVerified: false,
       verificationToken,
     });
-
+    //prueba
     const savedUser = await this.usersRepository.save(createUser);
 
     await this.mailService.sendVerificationEmail(savedUser);
