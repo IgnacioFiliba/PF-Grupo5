@@ -119,15 +119,13 @@ export class AuthController {
   }
 
   @Get('/verify/:token')
-  async verifyAccount(@Param('token') token: string, @Res() res: Response) {
+  async verifyAccount(@Param('token') token: string) {
     const verified = await this.authService.verifyAccount(token);
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-
     if (verified) {
-      return res.redirect(`${frontendUrl}`);
+      return { success: true, message: 'Cuenta verificada' };
     } else {
-      return res.redirect(`${frontendUrl}/verified-failed`);
+      return { success: false, message: 'Token inválido o expirado' };
     }
   }
 }
