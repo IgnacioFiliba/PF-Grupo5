@@ -20,6 +20,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MailModule } from './mail/mail.module';
 import { FavoritesModule } from './favorite/favorite.module';
+import { CommentsModule } from './comments/comments.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { FavoritesModule } from './favorite/favorite.module';
     CategoriesModule,
     DashboardModule,
     SupplierModule,
+    CommentsModule,
     StockEntryModule,
     PaymentsModule,
     FavoritesModule,

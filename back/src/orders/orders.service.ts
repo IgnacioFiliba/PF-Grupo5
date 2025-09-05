@@ -4,7 +4,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Users } from 'src/users/entities/user.entity';
 import { Orders } from './entities/order.entity';
@@ -122,22 +122,25 @@ export class OrdersService {
     };
   }
 
-  async findAll(user: any, orderId?: string) {
+  async findAll(user: any, page = 1, limit = 10, orderId?: string) {
     if (!user.isAdmin) {
       throw new ForbiddenException('Only admins can view all orders');
     }
 
     const where = orderId ? { id: orderId } : {};
 
-    const orders = await this.ordersRepository.find({
+    const [orders, total] = await this.ordersRepository.findAndCount({
       where,
       relations: {
         user: true,
         orderDetails: { items: { product: true } },
       },
+      skip: (page - 1) * limit,
+      take: limit,
+      order: { date: 'DESC' },
     });
 
-    return orders.map((order) => ({
+    const mappedOrders = orders.map((order) => ({
       id: order.id,
       date: order.date,
       status: order.status,
@@ -159,6 +162,16 @@ export class OrdersService {
         })),
       },
     }));
+
+    return {
+      data: mappedOrders,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async updateStatus(orderId: string, user: any) {
@@ -194,6 +207,9 @@ export class OrdersService {
 
   async getDashboard() {
     const orders = await this.ordersRepository.find({
+      where: {
+        status: In(['approved', 'completed']),
+      },
       relations: {
         orderDetails: { items: { product: true } },
       },

@@ -105,24 +105,32 @@ export class ProductsController {
   }
 
   @ApiOperation({ summary: 'Ejecutar seeder de productos (temporal)' })
-  @Get('/seeder')
+  @Get('seeder')
   seeder() {
     return this.productsService.seeder();
   }
 
-  // 🔹 Nuevo GET que unifica search + filtros
+  @ApiOperation({
+    summary:
+      'Obtener todas las marcas, modelos, motores y categorías distintas',
+  })
+  @Get('facets')
+  async getFacets() {
+    return this.productsService.getFacets();
+  }
+
+  // 🔹 GET con búsqueda + filtros
   @ApiOperation({
     summary: 'Obtener productos con búsqueda y filtros (incluye comentarios)',
   })
+  @ApiQuery({ name: 'search', required: false, description: 'Texto parcial' })
+  @ApiQuery({ name: 'brands', required: false, description: 'CSV o array' })
+  @ApiQuery({ name: 'models', required: false, description: 'CSV o array' })
+  @ApiQuery({ name: 'engines', required: false, description: 'CSV o array' })
   @ApiQuery({
-    name: 'search',
+    name: 'categoryId',
     required: false,
-    description: 'Texto parcial, case-insensitive',
-  })
-  @ApiQuery({
-    name: 'brands',
-    required: false,
-    description: 'CSV o array de marcas',
+    description: 'UUID de categoría',
   })
   @ApiQuery({ name: 'inStock', required: false, description: 'true | false' })
   @ApiQuery({ name: 'yearMin', required: false, type: Number })
@@ -135,6 +143,19 @@ export class ProductsController {
   async getProducts(@Query() query: FindProductsQuery) {
     const { items } = await this.productsService.findAllWithFilters(query);
     return items;
+  }
+
+  @ApiOperation({
+    summary: 'Obtener producto por nombre (coincidencia exacta)',
+  })
+  @ApiParam({
+    name: 'name',
+    description: 'Nombre del producto',
+    example: 'Filtro de Aceite Bosch',
+  })
+  @Get('name/:name')
+  findOneByName(@Param('name') name: string) {
+    return this.productsService.findOneByName(name);
   }
 
   @ApiOperation({ summary: 'Obtener producto por ID (incluye comentarios)' })
@@ -193,18 +214,5 @@ export class ProductsController {
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.remove(id);
-  }
-
-  @ApiOperation({
-    summary: 'Obtener producto por nombre (coincidencia exacta)',
-  })
-  @ApiParam({
-    name: 'name',
-    description: 'Nombre del producto',
-    example: 'Filtro de Aceite Bosch',
-  })
-  @Get('name/:name')
-  findOneByName(@Param('name') name: string) {
-    return this.productsService.findOneByName(name);
   }
 }

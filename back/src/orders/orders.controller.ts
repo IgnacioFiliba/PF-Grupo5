@@ -61,15 +61,25 @@ export class OrdersController {
     return this.orderService.findOne(id, userId);
   }
 
-  @ApiBearerAuth()
   @Get()
+  @ApiBearerAuth()
   @Roles(Role.ADMIN)
   @UseGuards(AuthGuard, RolesGuard)
   @ApiOperation({
-    summary: 'Obtener todas las órdenes o buscar por ID (solo admin)',
+    summary: 'Obtener todas las órdenes con paginación (solo admin)',
   })
-  findAll(@Req() req: Request, @Query('orderId') orderId?: string) {
-    return this.orderService.findAll(req.user, orderId);
+  findAll(
+    @Req() req: Request,
+    @Query('orderId') orderId?: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+  ) {
+    return this.orderService.findAll(
+      req.user,
+      Number(page),
+      Number(limit),
+      orderId,
+    );
   }
 
   @ApiBearerAuth()
@@ -92,5 +102,4 @@ export class OrdersController {
   async seedOrders() {
     return this.orderService.seeder();
   }
-
 }

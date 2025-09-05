@@ -5,7 +5,6 @@ import {
   Post,
   UseInterceptors,
   Req,
-  Res,
   UseGuards,
   HttpCode,
   UploadedFile,
